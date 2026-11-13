@@ -21,7 +21,9 @@ The API creates the initial tables on startup. The database user must have table
 
 ## Deployment
 
-- Vercel: keep Root Directory at the repository root (blank). The committed `vercel.json` sets build command `npm run build` and output directory `client/dist`. Set `VITE_API_URL` to the HTTPS backend URL. If using `client` as Root Directory instead, use output directory `dist`.
+- Vercel: keep Root Directory at the repository root (blank). The committed `vercel.json` builds `client/dist` and routes `/api/*` to `api/index.mjs`, which exports the Express application. The deployed frontend calls its own origin; no `VITE_API_URL` is needed on Vercel.
+- Add `DATABASE_URL`, `DATABASE_SSL=true`, `TOKEN_SECRET`, `OTP_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, and `MAIL_FROM` privately in Vercel environment settings. Set `CLIENT_ORIGIN` to the exact website origin and `TRUST_PROXY_HOPS=1`. Redeploy after changing environment variables. Never upload `.env` to Git.
+- For the temporary self-signed database setup, set `DATABASE_SSL_REJECT_UNAUTHORIZED=false`. TLS remains enabled but server identity is not checked. Before production use, restore `true` and configure the provider's CA via `DATABASE_CA_FILE` if necessary. Certificate verification defaults to enabled.
 - Backend: requires a host that explicitly supports persistent Node.js applications, outbound SMTP, and PostgreSQL connections. MonsterASP.NET plan compatibility has not been verified. Upload server sources, install production dependencies, configure environment values and run the start command supported by the host.
 - Set `NODE_ENV=production`, `CLIENT_ORIGIN` to the exact frontend origin, verified PostgreSQL TLS settings, and the correct reverse-proxy hop count for the host.
 - Prefer `app.yourdomain.com` and `api.yourdomain.com` to keep cookies on the same site. Unrelated hosting domains can encounter browser third-party cookie restrictions.
