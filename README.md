@@ -21,7 +21,7 @@ The API creates the initial tables on startup. The database user must have table
 
 ## Deployment
 
-- Vercel: set project root to `client`, build command `npm run build`, output directory `dist`, and `VITE_API_URL` to the HTTPS backend URL.
+- Vercel: keep Root Directory at the repository root (blank). The committed `vercel.json` sets build command `npm run build` and output directory `client/dist`. Set `VITE_API_URL` to the HTTPS backend URL. If using `client` as Root Directory instead, use output directory `dist`.
 - Backend: requires a host that explicitly supports persistent Node.js applications, outbound SMTP, and PostgreSQL connections. MonsterASP.NET plan compatibility has not been verified. Upload server sources, install production dependencies, configure environment values and run the start command supported by the host.
 - Set `NODE_ENV=production`, `CLIENT_ORIGIN` to the exact frontend origin, verified PostgreSQL TLS settings, and the correct reverse-proxy hop count for the host.
 - Prefer `app.yourdomain.com` and `api.yourdomain.com` to keep cookies on the same site. Unrelated hosting domains can encounter browser third-party cookie restrictions.
