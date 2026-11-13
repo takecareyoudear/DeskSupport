@@ -1,0 +1,1 @@
+{"name":"ticketing-server","private":true,"version":"1.0.0","type":"module","scripts":{"dev":"node --watch --env-file=.env src/index.js","start":"node --env-file=.env src/index.js","test":"node --test"},"dependencies":{"express":"^5.1.0","cors":"^2.8.5","helmet":"^8.1.0","express-rate-limit":"^8.0.0","pg":"^8.16.0","nodemailer":"^7.0.0","jsonwebtoken":"^9.0.2"}}
