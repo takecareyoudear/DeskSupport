@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import AppArtwork from './AppArtwork';
 
 const menus = [
   ['tickets', 'My tickets', 'Your support conversations', '#215bc4', 'ticket'],
@@ -47,7 +48,7 @@ export default function Home({ user, onLogout }) {
       <main className="launcher-main">
         <div className="launcher-intro"><span className="launcher-eyebrow">A LITTLE CLARITY. A LOT OF PROGRESS.</span><h1>Hello, {user.fullName.trim().split(/\s+/)[0]}<span>.</span></h1><p>Everything you need. One place to begin.</p></div>
         <div className="apps-heading"><h2>Your workspace</h2><span>{query ? 'Search results' : 'Choose an app to get started'}</span></div>
-        <div className="app-grid">{menus.filter(menu => `${menu[1]} ${menu[2]}`.toLowerCase().includes(query.toLowerCase())).map(menu => <button key={menu[0]} className="app-tile" style={{'--tile-color':menu[3]}} onClick={() => setSelected(menu)}><span className="app-icon"><Icon name={menu[4]}/></span><span className="app-name">{menu[1]}</span><span className="app-description">{menu[2]}</span><span className="tile-arrow" aria-hidden="true">↗</span></button>)}</div>
+        <div className="app-grid">{menus.filter(menu => `${menu[1]} ${menu[2]}`.toLowerCase().includes(query.toLowerCase())).map(menu => <button key={menu[0]} className="app-tile" style={{'--tile-color':menu[3]}} onClick={() => setSelected(menu)}><span className="app-icon"><AppArtwork name={menu[4]}/></span><span className="app-name">{menu[1]}</span><span className="app-description">{menu[2]}</span><span className="tile-arrow" aria-hidden="true">↗</span></button>)}</div>
         {query && !menus.some(menu => `${menu[1]} ${menu[2]}`.toLowerCase().includes(query.toLowerCase())) && <p className="empty-search" role="status">No apps found for “{query}”. Try another name.</p>}
         {error && <p className="launcher-error" role="alert">{error}</p>}
       </main>

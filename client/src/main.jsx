@@ -3,8 +3,9 @@ import { createRoot } from 'react-dom/client';
 import './style.css';
 import Home from './Home';
 import PasswordRecovery from './PasswordRecovery';
+import { requestJson } from './api.mjs';
 
-const API = import.meta.env.DEV ? (import.meta.env.VITE_API_URL || 'http://localhost:4000') : '';
+const API = import.meta.env.DEV ? (import.meta.env.VITE_API_URL || '') : '';
 function App() {
   const [mode, setMode] = useState('register');
   const [step, setStep] = useState(0);
@@ -21,10 +22,7 @@ function App() {
   const [visible, setVisible] = useState(false);
   useEffect(() => { const controller = new AbortController(); fetch(`${API}/api/auth/me`, {credentials:'include',signal:controller.signal}).then(response=>response.ok?response.json():null).then(data=>{if(data?.user)setUser(data.user);}).catch(()=>{}); return ()=>controller.abort(); }, []);
   async function request(path, body) {
-    const response = await fetch(`${API}/api/auth/${path}`, {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Something went wrong. Please try again.');
-    return data;
+    return requestJson(`${API}/api/auth/${path}`, body);
   }
   function switchMode(next) { setMode(next); setStep(0); setError(''); setNotice(''); setPassword(''); setConfirm(''); setOtp(''); setToken(''); }
   async function sendCode() { await request('send-otp', {email}); setStep(1); setNotice('A verification code has been sent. Check your inbox and spam folder.'); }

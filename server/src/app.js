@@ -19,7 +19,7 @@ const production = process.env.NODE_ENV === 'production';
 const pool = new pg.Pool({...databaseOptions(), max:3, connectionTimeoutMillis:15000, idleTimeoutMillis:10000});
 pool.on('error',()=>console.error('Database connection error'));
 await pool.query(readFileSync(new URL('./schema.sql',import.meta.url),'utf8'));
-const mail = nodemailer.createTransport({host:process.env.SMTP_HOST,port:Number(process.env.SMTP_PORT||587),secure:process.env.SMTP_SECURE==='true',auth:{user:process.env.SMTP_USER,pass:process.env.SMTP_PASSWORD},disableFileAccess:true,disableUrlAccess:true});
+const mail = nodemailer.createTransport({host:process.env.SMTP_HOST,port:Number(process.env.SMTP_PORT||587),secure:process.env.SMTP_SECURE==='true',auth:{user:process.env.SMTP_USER,pass:process.env.SMTP_PASSWORD},connectionTimeout:10000,greetingTimeout:10000,socketTimeout:20000,disableFileAccess:true,disableUrlAccess:true});
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS||0));

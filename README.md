@@ -13,6 +13,8 @@ Registration: email → emailed six-digit OTP → full name and password → sig
 5. Run `npm run server` and, in another terminal, `npm run dev`.
 6. Open http://localhost:5173.
 
+For mobile testing on the same network, open `http://<computer-LAN-IP>:5173` on your phone. Vite listens on all interfaces and proxies `/api` to the local API, so login cookies work on the phone's chosen address. Leave `VITE_API_URL` blank and use `CLIENT_ORIGIN=http://localhost:5173` for this development setup. Allow inbound TCP port 5173 from the local subnet in Windows Firewall. Keep both development servers running.
+
 The API creates the initial tables on startup. The database user must have table creation permissions. There are no fake OTPs or development bypasses: SMTP must be configured to register.
 
 ## Checks
