@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 
 const menus = [
-  ['tickets', 'My tickets', 'Your support conversations', '#75baff', 'ticket'],
-  ['create', 'New ticket', 'Start a support request', '#9ce1c2', 'plus'],
-  ['inbox', 'Inbox', 'Updates and conversations', '#c3a6ff', 'chat'],
-  ['knowledge', 'Knowledge base', 'Find answers and guides', '#ffd18c', 'book'],
-  ['activity', 'Activity', 'Your latest workspace activity', '#f5a7bf', 'activity'],
-  ['team', 'Team', 'People in your workspace', '#8bd9e6', 'team'],
-  ['reports', 'Reports', 'Support insights and trends', '#abb8ff', 'chart'],
-  ['settings', 'Settings', 'Make the workspace yours', '#dfb8ed', 'settings'],
+  ['tickets', 'My tickets', 'Your support conversations', '#215bc4', 'ticket'],
+  ['create', 'New ticket', 'Start a support request', '#087b57', 'plus'],
+  ['inbox', 'Inbox', 'Updates and conversations', '#7540bd', 'chat'],
+  ['knowledge', 'Knowledge base', 'Find answers and guides', '#a65b08', 'book'],
+  ['activity', 'Activity', 'Your latest workspace activity', '#ba3564', 'activity'],
+  ['team', 'Team', 'People in your workspace', '#087b90', 'team'],
+  ['reports', 'Reports', 'Support insights and trends', '#4d50bc', 'chart'],
+  ['settings', 'Settings', 'Make the workspace yours', '#914598', 'settings'],
 ];
 function Icon({ name, ...props }) {
   const paths = {
@@ -42,7 +42,7 @@ export default function Home({ user, onLogout }) {
       <header className="launcher-header">
         <a href="/" className="launcher-brand"><span className="launcher-mark">s<span>·</span></span><span>SupportDesk<small>YOUR WORKSPACE, CONNECTED</small></span></a>
         <label className="launcher-search"><Icon name="search"/><input aria-label="Search apps" placeholder="Find an app…" value={query} onChange={event => setQuery(event.target.value)}/>{query && <button aria-label="Clear search" onClick={() => setQuery('')}>×</button>}</label>
-        <div className="launcher-account"><span className="online-status">Workspace online</span><button className="profile-button" title={user.fullName} aria-label={`View profile for ${user.fullName}`} onClick={() => setSelected(['profile', 'Your profile', '', '#9ce1c2', 'team'])}>{initials}</button></div>
+        <div className="launcher-account"><span className="online-status">Workspace online</span><button className="profile-button" title={user.fullName} aria-label={`View profile for ${user.fullName}`} onClick={() => setSelected(['profile', 'Your profile', '', '#087b57', 'team'])}>{initials}</button></div>
       </header>
       <main className="launcher-main">
         <div className="launcher-intro"><span className="launcher-eyebrow">A LITTLE CLARITY. A LOT OF PROGRESS.</span><h1>Hello, {user.fullName.trim().split(/\s+/)[0]}<span>.</span></h1><p>Everything you need. One place to begin.</p></div>
