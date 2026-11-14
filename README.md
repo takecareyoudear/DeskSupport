@@ -17,6 +17,10 @@ The API creates the initial tables on startup. The database user must have table
 
 ## Checks
 
+Password recovery is available from **Forgot password?** on the login form. A separate, hashed six-digit email code expires after ten minutes, allows five guesses, and has a sixty-second resend cooldown. Resetting the password consumes the code and revokes all existing sessions. The API creates the `password_resets` table on startup. Recovery uses the existing SMTP settings and returns the same send response for registered and unknown addresses.
+
+The automated recovery route test uses an in-memory database double and mail capture. Before deployment, verify delivery with the configured SMTP service and exercise reset, old-password rejection, new-password login, code reuse rejection, and session revocation against PostgreSQL.
+
 `npm run build` builds the frontend. `npm test --workspace server` verifies password and OTP hashing. End-to-end verification requires running PostgreSQL and SMTP: send a code, test a wrong code, verify the correct code, register, then log in with correct and incorrect passwords. Check expiry, five-attempt lockout, resend cooldown, single-use registration, duplicate registration, and layout at 375px and desktop widths.
 
 ## Deployment
@@ -31,4 +35,4 @@ The API creates the initial tables on startup. The database user must have table
 
 ## Current status
 
-Dependencies installed; frontend production build and both server security tests pass. The frontend runs locally. Hosting, database, and email service have not been configured. SupportDesk is placeholder branding. Ticket management and password recovery are future stages.
+Dependencies installed; frontend production build and server tests pass. The frontend runs locally. SupportDesk is placeholder branding. Password recovery is implemented; ticket management is a future stage.

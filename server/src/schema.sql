@@ -19,3 +19,10 @@ CREATE TABLE IF NOT EXISTS sessions (
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   expires_at timestamptz NOT NULL
 );
+CREATE TABLE IF NOT EXISTS password_resets (
+  email varchar(254) PRIMARY KEY REFERENCES users(email) ON DELETE CASCADE,
+  code_hash text NOT NULL,
+  expires_at timestamptz NOT NULL,
+  sent_at timestamptz NOT NULL DEFAULT now(),
+  attempts integer NOT NULL DEFAULT 0
+);

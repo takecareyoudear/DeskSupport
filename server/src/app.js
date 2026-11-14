@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs';
 import { randomInt, randomUUID, randomBytes } from 'node:crypto';
 import { hashPassword, checkPassword, otpHash, sessionHash } from './security.js';
 import { databaseOptions } from './database.js';
+import { registerPasswordRecovery } from './password-recovery.js';
 
 for (const key of ['DATABASE_URL','CLIENT_ORIGIN','TOKEN_SECRET','OTP_SECRET','SMTP_HOST','SMTP_USER','SMTP_PASSWORD','MAIL_FROM']) {
   if (!process.env[key]) throw new Error(`Missing environment variable: ${key}`);
@@ -35,6 +36,7 @@ const sendLimiter = rateLimit({windowMs:60*60*1000,limit:10,handler:(_req,res)=>
 const normalizeEmail = value => typeof value === 'string' ? value.trim().toLowerCase() : '';
 const validEmail = value => value.length<=254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 const cookieOptions = {httpOnly:true,secure:production,sameSite:production?'none':'lax',path:'/api/auth'};
+registerPasswordRecovery(app, { pool, mail, sendLimiter, cookieOptions, secret: process.env.OTP_SECRET, from: process.env.MAIL_FROM });
 function sessionCookie(req) { return (req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('session='))?.slice(8)||''; }
 app.get('/api/health',(_req,res)=>res.json({status:'ok'}));
 app.post('/api/auth/send-otp',sendLimiter,async(req,res)=>{
