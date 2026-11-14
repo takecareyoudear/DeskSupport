@@ -6,10 +6,12 @@ import pg from 'pg';
 import nodemailer from 'nodemailer';
 import jwt from 'jsonwebtoken';
 import { readFileSync } from 'node:fs';
-import { randomInt, randomUUID, randomBytes } from 'node:crypto';
-import { hashPassword, checkPassword, otpHash, sessionHash } from './security.js';
+import { randomInt, randomUUID } from 'node:crypto';
+import { otpHash } from './security.js';
 import { databaseOptions } from './database.js';
 import { registerPasswordRecovery } from './password-recovery.js';
+import { registerWorkspace } from './workspace.js';
+import { registerAccounts } from './accounts.js';
 
 for (const key of ['DATABASE_URL','CLIENT_ORIGIN','TOKEN_SECRET','OTP_SECRET','SMTP_HOST','SMTP_USER','SMTP_PASSWORD','MAIL_FROM']) {
   if (!process.env[key]) throw new Error(`Missing environment variable: ${key}`);
@@ -19,6 +21,7 @@ const production = process.env.NODE_ENV === 'production';
 const pool = new pg.Pool({...databaseOptions(), max:3, connectionTimeoutMillis:15000, idleTimeoutMillis:10000});
 pool.on('error',()=>console.error('Database connection error'));
 await pool.query(readFileSync(new URL('./schema.sql',import.meta.url),'utf8'));
+await pool.query(readFileSync(new URL('./organizations.sql',import.meta.url),'utf8'));
 const mail = nodemailer.createTransport({host:process.env.SMTP_HOST,port:Number(process.env.SMTP_PORT||587),secure:process.env.SMTP_SECURE==='true',auth:{user:process.env.SMTP_USER,pass:process.env.SMTP_PASSWORD},connectionTimeout:10000,greetingTimeout:10000,socketTimeout:20000,disableFileAccess:true,disableUrlAccess:true});
 const app = express();
 app.disable('x-powered-by');
@@ -31,7 +34,7 @@ app.use('/api/auth',(req,res,next)=>{
   if (req.method !== 'GET' && req.get('origin') !== process.env.CLIENT_ORIGIN) return res.status(403).json({error:'Request origin is not allowed.'});
   next();
 });
-app.use('/api/auth',rateLimit({windowMs:15*60*1000,limit:50,standardHeaders:'draft-8',legacyHeaders:false,handler:(_req,res)=>res.status(429).json({error:'Too many requests. Please try again in 15 minutes.'})}));
+app.use('/api/auth',rateLimit({windowMs:15*60*1000,limit:50,skip:req=>req.path.startsWith('/workspace/'),standardHeaders:'draft-8',legacyHeaders:false,handler:(_req,res)=>res.status(429).json({error:'Too many requests. Please try again in 15 minutes.'})}));
 const sendLimiter = rateLimit({windowMs:60*60*1000,limit:10,handler:(_req,res)=>res.status(429).json({error:'Too many email requests. Please try again later.'})});
 const normalizeEmail = value => typeof value === 'string' ? value.trim().toLowerCase() : '';
 const validEmail = value => value.length<=254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -66,40 +69,7 @@ app.post('/api/auth/verify-otp',async(req,res)=>{
     res.json({registrationToken:jwt.sign({email,purpose:'register'},process.env.TOKEN_SECRET,{expiresIn:'15m',jwtid:id,issuer:'supportdesk',audience:'registration',algorithm:'HS256'})});
   } catch(error) {await client.query('ROLLBACK');throw error;} finally {client.release();}
 });
-app.post('/api/auth/register',async(req,res)=>{
-  const {registrationToken,password}=req.body;
-  const fullName=typeof req.body.fullName==='string'?req.body.fullName.trim():'';
-  if(fullName.length<2||fullName.length>100||typeof password!=='string'||password.length<12||password.length>128) return res.status(400).json({error:'Enter your full name and a password of 12–128 characters.'});
-  let claims;
-  try {claims=jwt.verify(registrationToken,process.env.TOKEN_SECRET,{algorithms:['HS256'],issuer:'supportdesk',audience:'registration'});if(claims.purpose!=='register') throw new Error();} catch{return res.status(401).json({error:'Verification expired. Please verify your email again.'});}
-  const hash=await hashPassword(password);
-  const client=await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const consumed=await client.query(`DELETE FROM email_verifications WHERE email=$1 AND registration_id=$2 AND verified_at > now()-interval '15 minutes' RETURNING email`,[claims.email,claims.jti]);
-    if(!consumed.rowCount){await client.query('ROLLBACK');return res.status(401).json({error:'Please verify your email again.'});}
-    await client.query('INSERT INTO users(id,email,full_name,password_hash) VALUES($1,$2,$3,$4)',[randomUUID(),claims.email,fullName,hash]);
-    await client.query('COMMIT');res.status(201).json({message:'Account created.'});
-  }catch(error){await client.query('ROLLBACK');if(error.code==='23505')return res.status(409).json({error:'An account already exists. Please log in.'});throw error;}finally{client.release();}
-});
-const dummyHash=await hashPassword(randomBytes(32).toString('hex'));
-app.post('/api/auth/login',async(req,res)=>{
-  const email=normalizeEmail(req.body.email), password=req.body.password;
-  if(!validEmail(email)||typeof password!=='string'||password.length>128)return res.status(400).json({error:'Enter a valid email and password.'});
-  const {rows}=await pool.query('SELECT * FROM users WHERE email=$1',[email]);
-  const user=rows[0];
-  const valid=await checkPassword(password,user?.password_hash||dummyHash);
-  if(!user||!valid)return res.status(401).json({error:'Email or password is incorrect.'});
-  const token=randomBytes(32).toString('hex');
-  await pool.query(`INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '1 day')`,[sessionHash(token),user.id]);
-  res.cookie('session',token,{...cookieOptions,maxAge:86400000});
-  res.json({user:{id:user.id,email:user.email,fullName:user.full_name}});
-});
-app.get('/api/auth/me',async(req,res)=>{
-  const {rows}=await pool.query('SELECT u.id,u.email,u.full_name FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()',[sessionHash(sessionCookie(req))]);
-  if(!rows[0])return res.status(401).json({error:'Please log in.'});
-  res.json({user:{id:rows[0].id,email:rows[0].email,fullName:rows[0].full_name}});
-});
-app.post('/api/auth/logout',async(req,res)=>{await pool.query('DELETE FROM sessions WHERE token_hash=$1',[sessionHash(sessionCookie(req))]);res.clearCookie('session',cookieOptions);res.json({message:'Signed out.'});});
+await registerAccounts(app,{pool,cookieOptions,sessionCookie,tokenSecret:process.env.TOKEN_SECRET});
+registerWorkspace(app,{pool,sessionCookie,origin:process.env.CLIENT_ORIGIN});
 app.use((err,req,res,next)=>{if(err.type==='entity.parse.failed')return res.status(400).json({error:'Invalid request.'});console.error('Request failed:',err.code||err.name);res.status(500).json({error:'Something went wrong. Please try again later.'});});
 export default app;

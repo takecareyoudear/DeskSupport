@@ -17,7 +17,19 @@ For mobile testing on the same network, open `http://<computer-LAN-IP>:5173` on 
 
 The API creates the initial tables on startup. The database user must have table creation permissions. There are no fake OTPs or development bypasses: SMTP must be configured to register.
 
-## Checks
+## Settings and organizations
+
+Each verified public signup now collects a unique username and creates an organization with a unique six-digit ID (100000-999999). The first user is the organization admin. Sign in with either username or email and password. The organization ID appears after signup and in Settings and the profile.
+
+Open **Settings → Master** to create, edit, update, and delete **Department**, **Category**, and **Project** records. These are independent lists, each with a required foreign key to its organization. Names are unique within each list and organization, ignoring case. Records referenced by foreign keys cannot be deleted. Future ticket relations should reference `(organization_id, id)` to enforce organization isolation.
+
+Admins can open **Settings → Users** to create member logins using full name, username, email, and an initial password of at least 12 characters. These users join the admin's organization and can view its Master lists; admin access is required for changes and user creation. Usernames and emails are globally unique. Public registration creates a separate organization; use Settings to add people to an existing organization.
+
+On API restart/deployment, `server/src/organizations.sql` applies the schema migration automatically. Existing accounts each receive their own organization and an automatically generated `user_<UUID>` username (shown in the profile); their current email/password login continues working. Back up the database before deploying schema changes. Six-digit IDs use a PostgreSQL sequence and never repeat; registration cannot create new organizations after this range is exhausted.
+
+The PostgreSQL integration test uses an isolated in-memory PGlite database, not the configured live database. It checks repeatable migrations, existing-account migration, registration transactions, login, independent Master CRUD, foreign-key restrictions, permissions, and organization isolation. Run `npm test --workspace server` and `npm run build`.
+
+## Authentication checks
 
 Password recovery is available from **Forgot password?** on the login form. A separate, hashed six-digit email code expires after ten minutes, allows five guesses, and has a sixty-second resend cooldown. Resetting the password consumes the code and revokes all existing sessions. The API creates the `password_resets` table on startup. Recovery uses the existing SMTP settings and returns the same send response for registered and unknown addresses.
 
