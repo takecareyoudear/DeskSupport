@@ -1,3 +1,4 @@
+import { validRenewal } from './renewals.js';
 import { randomUUID } from 'node:crypto';
 const uuid=value=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 const text=(value,max)=>typeof value==='string'&&value.trim().length<=max;
@@ -40,9 +41,15 @@ export function registerAssets(app,{pool}) {
     if(!uuid(body.category_id))return res.status(400).json({error:'Choose a category.'});
     const category=(await pool.query('SELECT asset_type,classification FROM asset_categories WHERE id=$1 AND organization_id=$2',[body.category_id,org])).rows[0];
     if(!category||category.asset_type!==body.asset_type)return res.status(400).json({error:'Choose a category belonging to the selected asset type.'});
-    if(category.classification==='subscription'&&(!body.end_date||!body.renewal_date))return res.status(400).json({error:'Subscription assets require expiry and renewal dates.'});
+    if(category.classification==='subscription'&&(!body.end_date||!body.renewal_frequency))return res.status(400).json({error:'Subscription assets require an expiry date and renewal schedule.'});
     columns.push('category_id');values.push(body.category_id);
-    for(const key of ['start_date','end_date','renewal_date','insurance_start_date','insurance_end_date','insurance_renewal_date']){
+    for(const prefix of ['renewal','insurance_renewal']){
+     const frequency=body[`${prefix}_frequency`]||null;
+     const month=body[`${prefix}_month`]??null,day=body[`${prefix}_day`]??null;
+     if(frequency?!validRenewal(frequency,month,day):(month!==null||day!==null))return res.status(400).json({error:'Choose monthly with a day (1-31), or yearly with a valid month and day.'});
+     columns.push(`${prefix}_frequency`,`${prefix}_month`,`${prefix}_day`,`${prefix}_date`);values.push(frequency,month,day,null);
+    }
+    for(const key of ['start_date','end_date','insurance_start_date','insurance_end_date']){
      if(!date(body[key]))return res.status(400).json({error:'Enter valid calendar dates.'});
      columns.push(key);values.push(body[key]||null);
     }

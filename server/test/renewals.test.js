@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {nextRenewal,validRenewal} from '../src/renewals.js';
+test('recurring renewals handle today, year rollover, short months and leap years',()=>{
+ assert.equal(nextRenewal('yearly',12,15,'2026-11-15'),'2026-12-15');
+ assert.equal(nextRenewal('yearly',1,10,'2026-11-15'),'2027-01-10');
+ assert.equal(nextRenewal('yearly',11,15,'2026-11-15'),'2026-11-15');
+ assert.equal(nextRenewal('monthly',null,10,'2026-11-15'),'2026-12-10');
+ assert.equal(nextRenewal('monthly',null,10,'2026-12-15'),'2027-01-10');
+ assert.equal(nextRenewal('monthly',null,31,'2026-02-01'),'2026-02-28');
+ assert.equal(nextRenewal('monthly',null,31,'2028-02-01'),'2028-02-29');
+ assert.equal(nextRenewal('monthly',null,31,'2026-02-28'),'2026-02-28');
+ assert.equal(nextRenewal('monthly',null,31,'2026-03-01'),'2026-03-31');
+ assert.equal(nextRenewal('yearly',2,29,'2026-02-01'),'2026-02-28');
+ assert.equal(nextRenewal('yearly',2,29,'2028-02-01'),'2028-02-29');
+ assert.equal(validRenewal('yearly',2,30),false);
+ assert.equal(validRenewal('yearly',4,31),false);
+ assert.equal(validRenewal('monthly',2,10),false);
+ assert.equal(nextRenewal(null,null,null,'2026-11-15'),null);
+});

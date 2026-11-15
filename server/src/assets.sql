@@ -35,4 +35,12 @@ UPDATE assets a SET asset_type=CASE WHEN c.nature='virtual' THEN 'virtual' ELSE 
 FROM asset_categories c,asset_types t WHERE a.category_id=c.id AND a.type_id=t.id AND a.asset_type IS NULL;
 ALTER TABLE assets ALTER COLUMN asset_type SET NOT NULL;
 ALTER TABLE assets ALTER COLUMN type_id DROP NOT NULL;
+ALTER TABLE assets ADD COLUMN IF NOT EXISTS renewal_frequency varchar(7);
+ALTER TABLE assets ADD COLUMN IF NOT EXISTS renewal_month integer;
+ALTER TABLE assets ADD COLUMN IF NOT EXISTS renewal_day integer;
+UPDATE assets SET renewal_frequency='yearly',renewal_month=EXTRACT(MONTH FROM renewal_date),renewal_day=EXTRACT(DAY FROM renewal_date) WHERE renewal_frequency IS NULL AND renewal_date IS NOT NULL;
+ALTER TABLE assets ADD COLUMN IF NOT EXISTS insurance_renewal_frequency varchar(7);
+ALTER TABLE assets ADD COLUMN IF NOT EXISTS insurance_renewal_month integer;
+ALTER TABLE assets ADD COLUMN IF NOT EXISTS insurance_renewal_day integer;
+UPDATE assets SET insurance_renewal_frequency='yearly',insurance_renewal_month=EXTRACT(MONTH FROM insurance_renewal_date),insurance_renewal_day=EXTRACT(DAY FROM insurance_renewal_date) WHERE insurance_renewal_frequency IS NULL AND insurance_renewal_date IS NOT NULL;
 COMMIT;
