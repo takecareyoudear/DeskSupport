@@ -1,3 +1,4 @@
+import {canAccess} from './menu-catalog.js';
 import { validRenewal } from './renewals.js';
 import { randomUUID } from 'node:crypto';
 const uuid=value=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -10,7 +11,7 @@ export function registerAssets(app,{pool}) {
   const org=[req.account.organization_id];
 
   const categories=(await pool.query('SELECT id,name,asset_type,classification FROM asset_categories WHERE organization_id=$1 ORDER BY lower(name)',org)).rows;
-  const assets=(await pool.query('SELECT * FROM assets WHERE organization_id=$1 ORDER BY lower(name)',org)).rows;
+  const assets=canAccess({...req.account,menus:req.account.access_menus},'assets.register')?(await pool.query('SELECT * FROM assets WHERE organization_id=$1 ORDER BY lower(name)',org)).rows:[];
   res.json({categories,assets});
  });
  app.post(`${base}/:kind/:action`,async(req,res)=>{

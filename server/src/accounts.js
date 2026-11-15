@@ -1,3 +1,4 @@
+import {menuAccess} from './roles.js';
 import { randomUUID, randomBytes } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { hashPassword, checkPassword, sessionHash } from './security.js';
@@ -37,12 +38,12 @@ app.post('/api/auth/login',async(req,res)=>{
   const token=randomBytes(32).toString('hex');
   await pool.query(`INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '1 day')`,[sessionHash(token),user.id]);
   res.cookie('session',token,{...cookieOptions,maxAge:86400000});
-  res.json({user:publicUser(user)});
+  res.json({user:publicUser(await menuAccess(pool,user))});
 });
 app.get('/api/auth/me',async(req,res)=>{
-  const {rows}=await pool.query('SELECT u.id,u.email,u.full_name,u.username,u.organization_id,u.role FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()',[sessionHash(sessionCookie(req))]);
+  const {rows}=await pool.query('SELECT u.id,u.email,u.full_name,u.username,u.organization_id,u.role,u.menu_role_id FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()',[sessionHash(sessionCookie(req))]);
   if(!rows[0])return res.status(401).json({error:'Please log in.'});
-  res.json({user:publicUser(rows[0])});
+  res.json({user:publicUser(await menuAccess(pool,rows[0]))});
 });
 app.post('/api/auth/logout',async(req,res)=>{await pool.query('DELETE FROM sessions WHERE token_hash=$1',[sessionHash(sessionCookie(req))]);res.clearCookie('session',cookieOptions);res.json({message:'Signed out.'});});
 }

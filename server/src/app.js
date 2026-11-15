@@ -13,6 +13,7 @@ import { registerPasswordRecovery } from './password-recovery.js';
 import { registerPayables } from './payables.js';
 import { registerAssets } from './assets.js';
 import { registerWorkspace } from './workspace.js';
+import {registerRoles} from './roles.js';
 import { registerAccounts } from './accounts.js';
 
 for (const key of ['DATABASE_URL','CLIENT_ORIGIN','TOKEN_SECRET','OTP_SECRET','SMTP_HOST','SMTP_USER','SMTP_PASSWORD','MAIL_FROM']) {
@@ -26,6 +27,7 @@ await pool.query(readFileSync(new URL('./schema.sql',import.meta.url),'utf8'));
 await pool.query(readFileSync(new URL('./organizations.sql',import.meta.url),'utf8'));
 await pool.query(readFileSync(new URL('./assets.sql',import.meta.url),'utf8'));
 await pool.query(readFileSync(new URL('./payables.sql',import.meta.url),'utf8'));
+await pool.query(readFileSync(new URL('./roles.sql',import.meta.url),'utf8'));
 const mail = nodemailer.createTransport({host:process.env.SMTP_HOST,port:Number(process.env.SMTP_PORT||587),secure:process.env.SMTP_SECURE==='true',auth:{user:process.env.SMTP_USER,pass:process.env.SMTP_PASSWORD},connectionTimeout:10000,greetingTimeout:10000,socketTimeout:20000,disableFileAccess:true,disableUrlAccess:true});
 const app = express();
 app.disable('x-powered-by');
@@ -75,6 +77,7 @@ app.post('/api/auth/verify-otp',async(req,res)=>{
 });
 await registerAccounts(app,{pool,cookieOptions,sessionCookie,tokenSecret:process.env.TOKEN_SECRET});
 registerWorkspace(app,{pool,sessionCookie,origin:process.env.CLIENT_ORIGIN});
+registerRoles(app,{pool});
 registerAssets(app,{pool});
 registerPayables(app,{pool});
 app.use((err,req,res,next)=>{if(err.type==='entity.parse.failed')return res.status(400).json({error:'Invalid request.'});console.error('Request failed:',err.code||err.name);res.status(500).json({error:'Something went wrong. Please try again later.'});});

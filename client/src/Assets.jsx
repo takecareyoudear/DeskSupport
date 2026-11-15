@@ -1,4 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
+import {canAccess} from '../../server/src/menu-catalog.js';
 import {nextRenewal} from '../../server/src/renewals.js';
 import {readApiResponse,requestJson} from './api.mjs';
 const API=import.meta.env.DEV?(import.meta.env.VITE_API_URL||''):'';
@@ -10,7 +11,7 @@ const empty=kind=>kind==='categories'?{name:'',asset_type:'',is_subscription:fal
 const dates=[['start_date','Start date'],['end_date','Expiry date']];
 const months=Array.from({length:12},(_,i)=>[String(i+1),new Intl.DateTimeFormat('en',{month:'long',timeZone:'UTC'}).format(new Date(Date.UTC(2000,i,1)))]);
 export default function Assets({user,onBack}){
- const [kind,setKind]=useState('assets'),[data,setData]=useState(null),[form,setForm]=useState(empty('assets'));
+ const [kind,setKind]=useState(canAccess(user,'assets.register')?'assets':'categories'),[data,setData]=useState(null),[form,setForm]=useState(empty('assets'));
  const [editing,setEditing]=useState(null),[deleting,setDeleting]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const nameInput=useRef(null),admin=user.role==='admin';
  const categories=(data?.categories||[]).filter(row=>row.asset_type===form.asset_type);
@@ -30,7 +31,7 @@ export default function Assets({user,onBack}){
  const renewalInfo=(row,prefix)=>{const frequency=row[`${prefix}_frequency`];if(!frequency)return 'Not set';const next=nextRenewal(frequency,row[`${prefix}_month`],row[`${prefix}_day`]);return `${frequency==='monthly'?`Every month on day ${row[`${prefix}_day`]}`:`Every year on ${row[`${prefix}_day`]} ${months.find(([value])=>Number(value)===row[`${prefix}_month`])?.[1]}`} | Next: ${next?new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(`${next}T12:00:00Z`)):'Not set'}`;};
  const displayDate=value=>value?String(value).slice(0,10):'Not set';
  return <main className="settings-main assets-main"><div className="settings-heading"><div><span className="launcher-eyebrow">ASSET MANAGEMENT</span><h1>Assets</h1><p>Organization ID <strong>{user.organizationId}</strong></p></div><button className="settings-button" disabled={busy} onClick={onBack}>Back to workspace</button></div>
- <div className="settings-layout"><nav className="settings-nav" aria-label="Asset menu"><span className="settings-nav-title">ASSETS & MASTERS</span>{Object.entries(titles).map(([key,text])=><button key={key} disabled={busy} aria-current={kind===key?'page':undefined} onClick={()=>change(key)}>{text}</button>)}</nav>
+ <div className="settings-layout"><nav className="settings-nav" aria-label="Asset menu"><span className="settings-nav-title">ASSETS & MASTERS</span>{Object.entries(titles).filter(([key])=>canAccess(user,key==='assets'?'assets.register':'assets.categories')).map(([key,text])=><button key={key} disabled={busy} aria-current={kind===key?'page':undefined} onClick={()=>change(key)}>{text}</button>)}</nav>
  <section className="settings-panel" aria-labelledby="assets-title"><h2 id="assets-title">{titles[kind]}</h2><p className="settings-muted">{kind==='categories'?'Create categories such as Car, Bike, Staff, Building, Subscription, Shop, Apartment, and Home. Link each category to an asset type.':'Choose an asset type first, then a category. Subscription categories require expiry and renewal dates.'}</p>
  {error&&<p className="error" role="alert">{error}</p>}{notice&&<p className="notice" role="status">{notice}</p>}
  {admin?<form className="user-form asset-form" onSubmit={save}><h3 className="user-form-title">{editing?'Edit':'Create'} {kind==='assets'?'asset':'asset category'}</h3>

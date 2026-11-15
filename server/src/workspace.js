@@ -1,8 +1,10 @@
+import {menuAccess,validMenuRole} from './roles.js';
+import {canAccess} from './menu-catalog.js';
 import { randomUUID } from 'node:crypto';
 import { hashPassword, sessionHash } from './security.js';
 
 export const validUsername = value => typeof value === 'string' && /^[a-z0-9][a-z0-9_.]{2,39}$/.test(value);
-export const publicUser = user => ({id:user.id,email:user.email,fullName:user.full_name,username:user.username,organizationId:user.organization_id,role:user.role});
+export const publicUser = user => ({id:user.id,email:user.email,fullName:user.full_name,username:user.username,organizationId:user.organization_id,role:user.role,menuRoleId:user.menu_role_id||null,menus:user.access_menus||[]});
 const uuid = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 const tables = new Set(['departments','categories','projects']);
 
@@ -12,7 +14,12 @@ export function registerWorkspace(app,{pool,sessionCookie,origin}) {
     if(req.method!=='GET' && req.get('origin')!==origin) return res.status(403).json({error:'Request origin is not allowed.'});
     const {rows}=await pool.query('SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()',[sessionHash(sessionCookie(req))]);
     if(!rows[0])return res.status(401).json({error:'Please log in.'});
-    req.account=rows[0];
+    req.account=await menuAccess(pool,rows[0]);
+    if(req.account.role!=='admin'){
+      const path=req.path.split('/').filter(Boolean);
+      const menu=path[0]==='masters'?'settings.master':path[0]==='payables'?'payble':path[0]==='assets'?(path.length===1?'assets':path[1]==='categories'?'assets.categories':'assets.register'):null;
+      if(!menu||!canAccess({...req.account,menus:req.account.access_menus},menu))return res.status(403).json({error:'Your assigned role does not allow this menu.'});
+    }
     if(req.method!=='GET' && req.account.role!=='admin')return res.status(403).json({error:'Only organization admins can make changes.'});
     next();
   });
@@ -43,7 +50,7 @@ export function registerWorkspace(app,{pool,sessionCookie,origin}) {
   });
   app.get(`${base}/users`,async(req,res)=>{
     if(req.account.role!=='admin')return res.status(403).json({error:'Only organization admins can manage users.'});
-    const {rows}=await pool.query('SELECT id,email,full_name,username,organization_id,role FROM users WHERE organization_id=$1 ORDER BY full_name,id',[req.account.organization_id]);
+    const {rows}=await pool.query('SELECT id,email,full_name,username,organization_id,role,menu_role_id FROM users WHERE organization_id=$1 ORDER BY full_name,id',[req.account.organization_id]);
     res.json({users:rows.map(publicUser)});
   });
   app.post(`${base}/users`,async(req,res)=>{
@@ -55,11 +62,13 @@ export function registerWorkspace(app,{pool,sessionCookie,origin}) {
     if(!['member','admin'].includes(role))return res.status(400).json({error:'Choose User or Admin as the user level.'});
     if(!validUsername(username)||email.length>254||!/^\S+@[^\s@]+\.[^\s@]+$/.test(email)||fullName.length<2||fullName.length>100||typeof password!=='string'||password.length<12||password.length>128)
       return res.status(400).json({error:'Enter a full name, username (3-40 letters, numbers, dots or underscores), valid email and password (12-128 characters).'});
+    if(!await validMenuRole(pool,req.body.menuRoleId,req.account.organization_id))return res.status(400).json({error:'Choose a menu role from your organization.'});
     try {
-      const {rows}=await pool.query('INSERT INTO users(id,email,full_name,password_hash,username,organization_id,role) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id,email,full_name,username,organization_id,role',[randomUUID(),email,fullName,await hashPassword(password),username,req.account.organization_id,role]);
+      const {rows}=await pool.query('INSERT INTO users(id,email,full_name,password_hash,username,organization_id,role,menu_role_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id,email,full_name,username,organization_id,role,menu_role_id',[randomUUID(),email,fullName,await hashPassword(password),username,req.account.organization_id,role,req.body.menuRoleId||null]);
       res.status(201).json({user:publicUser(rows[0])});
     } catch(error) {
       if(error.code==='23505')return res.status(409).json({error:'Email or username already exists.'});
+      if(error.code==='23503')return res.status(409).json({error:'The selected menu role no longer exists. Reload and choose another.'});
       throw error;
     }
   });
@@ -85,15 +94,17 @@ export function registerWorkspace(app,{pool,sessionCookie,origin}) {
         const admins=(await client.query("SELECT id FROM users WHERE organization_id=$1 AND role='admin'",[req.account.organization_id])).rows;
         if(admins.length<=1){await client.query('ROLLBACK');return res.status(409).json({error:'Keep at least one admin in the organization.'});}
       }
+      const menuRoleId=req.body.menuRoleId===undefined?target.menu_role_id:req.body.menuRoleId||null;
+      if(!await validMenuRole(client,menuRoleId,req.account.organization_id)){await client.query('ROLLBACK');return res.status(400).json({error:'Choose a menu role from your organization.'});}
       const hash=password?await hashPassword(password):target.password_hash;
-      const {rows}=await client.query('UPDATE users SET full_name=$3,role=$4,password_hash=$5 WHERE id=$1 AND organization_id=$2 RETURNING id,email,full_name,username,organization_id,role',[target.id,req.account.organization_id,fullName,role,hash]);
+      const {rows}=await client.query('UPDATE users SET full_name=$3,role=$4,password_hash=$5,menu_role_id=$6 WHERE id=$1 AND organization_id=$2 RETURNING id,email,full_name,username,organization_id,role,menu_role_id',[target.id,req.account.organization_id,fullName,role,hash,menuRoleId]);
       if(password){
         await client.query('DELETE FROM sessions WHERE user_id=$1',[target.id]);
         await client.query('DELETE FROM password_resets WHERE email=$1',[target.email]);
       }
       await client.query('COMMIT');
       res.json({user:publicUser(rows[0])});
-    }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
+    }catch(error){await client.query('ROLLBACK');if(error.code==='23503')return res.status(409).json({error:'The selected menu role no longer exists. Reload and choose another.'});throw error;}finally{client.release();}
   });
 
 }

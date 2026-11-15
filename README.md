@@ -29,6 +29,16 @@ On API restart/deployment, `server/src/organizations.sql` applies the schema mig
 
 The PostgreSQL integration test uses an isolated in-memory PGlite database, not the configured live database. It checks repeatable migrations, existing-account migration, registration transactions, login, independent Master CRUD, foreign-key restrictions, permissions, and organization isolation. Run `npm test --workspace server` and `npm run build`.
 
+## System Settings: roles and menu access
+
+Admins can open **System Settings ? Role master** to create, rename, edit, and delete organization-specific menu roles. The expandable menu tree includes every home app, Assets submenus, System Settings, and Company Profile in the drawer. Parent checkboxes select their available children; individual children can be selected independently. Home remains available to everyone. User and role administration are marked Admin only and cannot be granted through a regular menu role.
+
+Under **System Settings ? Users**, create or edit a login and choose its **Menu role**. The existing **User level** controls administrative privileges: Admin retains all menus and can manage records; User gets only the selected role's menus with read access. No assigned menu role means no application menus. One menu role can be assigned to each user, and many users can share a role. Username and email remain immutable.
+
+Hidden menus are removed from home tiles, search results, shortcuts, the drawer, and submenu navigation. Workspace APIs check current role permissions on every request; unauthorized requests receive 403. Roles and assignments cannot cross organization boundaries. Role changes also refresh in the UI on window focus and every 30 seconds. Deleting an assigned role is blocked until users are reassigned or unassigned.
+
+The repeatable `server/src/roles.sql` migration assigns existing regular users a **Standard User** role preserving their previous menus once. Admins can edit that role or replace it with narrower roles. Migration reruns do not restore revoked access. New users receive no menu role by default, and admin accounts retain all menus to prevent administrative lockout.
+
 ## Assets
 
 Open **Assets** from the home screen. Admins can create, view, edit, and delete organization-scoped **Category master** and **Asset register** records. Members have read-only access.
