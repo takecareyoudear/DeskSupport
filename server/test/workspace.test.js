@@ -111,6 +111,34 @@ test('PostgreSQL migration, signup, username login and organization-scoped Maste
   assert.equal((await request('workspace/users',{fullName:'Default User',username:'defaultuser',email:'default@example.com',password},adminLogin.cookie)).body.user.role,'member');
   assert.equal((await request('workspace/users',{fullName:'Escalation',username:'escalation',email:'escalation@example.com',password,role:'admin'},member.cookie)).status,403);
   assert.equal((await request('workspace/users',undefined,cookie)).body.users.length,4);
+
+  const editPath=`workspace/users/${user.body.user.id}/update`;
+  const changes={fullName:'Updated Member',role:'admin',password:''};
+  assert.equal((await request(editPath,changes,member.cookie)).status,403);
+  assert.equal((await request(editPath,changes,legacyLogin.cookie)).status,404);
+  assert.equal((await request(editPath,changes,cookie,'https://foreign.example')).status,403);
+  for(const invalid of [{fullName:'x'},{role:'owner'},{password:'short'},{password:123},{username:'changed'},{email:'changed@example.com'}]){
+    assert.equal((await request(editPath,{...changes,...invalid},cookie)).status,400);
+  }
+  const updated=await request(editPath,changes,cookie);
+  assert.equal(updated.status,200);
+  assert.equal(updated.body.user.fullName,'Updated Member');
+  assert.equal(updated.body.user.role,'admin');
+  assert.equal(updated.body.user.username,'teammate');
+  assert.equal(updated.body.user.email,'member@example.com');
+  assert.equal(updated.body.user.password_hash,undefined);
+  assert.equal((await request('workspace/users',undefined,member.cookie)).status,200,'role changes apply to existing sessions');
+  assert.equal((await request('login',{identifier:'teammate',password})).status,200,'blank password keeps old password');
+  assert.equal((await request(editPath,{fullName:'Updated Member',role:'member'},cookie)).status,200);
+  assert.equal((await request('workspace/users',undefined,member.cookie)).status,403,'demotion applies immediately');
+  const newPassword='a replacement secure password';
+  await db.query("INSERT INTO password_resets(email,code_hash,expires_at) VALUES('member@example.com','old-code',now()+interval '10 minutes')");
+  assert.equal((await request(editPath,{fullName:'Renamed Member',role:'member',password:newPassword},cookie)).status,200);
+  assert.equal((await request('me',undefined,member.cookie)).status,401,'password update revokes sessions');
+  assert.equal((await request('login',{identifier:'teammate',password})).status,401);
+  assert.equal((await request('login',{identifier:'teammate',password:newPassword})).status,200);
+  assert.equal((await db.query("SELECT * FROM password_resets WHERE email='member@example.com'")).rows.length,0);
+  assert.equal((await request(`workspace/users/${legacyId}/update`,{fullName:'Legacy Owner',role:'member'},legacyLogin.cookie)).status,409,'last admin cannot be demoted');
   await request('logout',{},cookie);
   assert.equal((await request(base,undefined,cookie)).status,401,'logout revokes workspace access');
 });

@@ -63,4 +63,37 @@ export function registerWorkspace(app,{pool,sessionCookie,origin}) {
       throw error;
     }
   });
+  app.post(`${base}/users/:id/update`,async(req,res)=>{
+    const fullName=typeof req.body.fullName==='string'?req.body.fullName.trim():'';
+    const {role,password}=req.body;
+    if(!uuid(req.params.id)||fullName.length<2||fullName.length>100||!['member','admin'].includes(role)||
+      (password!==undefined && (typeof password!=='string'||(password!==''&&(password.length<12||password.length>128)))))
+      return res.status(400).json({error:'Enter a full name (2-100 characters), User or Admin level, and an optional password of 12-128 characters.'});
+    const client=await pool.connect();
+    try {
+      await client.query('BEGIN');
+      // Serialize membership changes so concurrent requests cannot remove every admin.
+      await client.query('SELECT id FROM organizations WHERE id=$1 FOR UPDATE',[req.account.organization_id]);
+      const actor=(await client.query('SELECT role FROM users WHERE id=$1 AND organization_id=$2',[req.account.id,req.account.organization_id])).rows[0];
+      if(actor?.role!=='admin'){await client.query('ROLLBACK');return res.status(403).json({error:'Only organization admins can make changes.'});}
+      const target=(await client.query('SELECT * FROM users WHERE id=$1 AND organization_id=$2 FOR UPDATE',[req.params.id,req.account.organization_id])).rows[0];
+      if(!target){await client.query('ROLLBACK');return res.status(404).json({error:'User not found in your organization.'});}
+      if((req.body.username!==undefined&&req.body.username!==target.username)||(req.body.email!==undefined&&req.body.email!==target.email)){
+        await client.query('ROLLBACK');return res.status(400).json({error:'Username and email cannot be changed.'});
+      }
+      if(target.role==='admin'&&role==='member'){
+        const admins=(await client.query("SELECT id FROM users WHERE organization_id=$1 AND role='admin'",[req.account.organization_id])).rows;
+        if(admins.length<=1){await client.query('ROLLBACK');return res.status(409).json({error:'Keep at least one admin in the organization.'});}
+      }
+      const hash=password?await hashPassword(password):target.password_hash;
+      const {rows}=await client.query('UPDATE users SET full_name=$3,role=$4,password_hash=$5 WHERE id=$1 AND organization_id=$2 RETURNING id,email,full_name,username,organization_id,role',[target.id,req.account.organization_id,fullName,role,hash]);
+      if(password){
+        await client.query('DELETE FROM sessions WHERE user_id=$1',[target.id]);
+        await client.query('DELETE FROM password_resets WHERE email=$1',[target.email]);
+      }
+      await client.query('COMMIT');
+      res.json({user:publicUser(rows[0])});
+    }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
+  });
+
 }

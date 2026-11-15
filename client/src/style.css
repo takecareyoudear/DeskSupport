@@ -31,3 +31,5 @@
 
 /* Readable access controls. */
 .settings-panel select{display:block;width:100%;margin-top:8px;padding:12px 14px;border:1px solid #a9bad3;border-radius:9px;background:#fff;color:#20324e;font:inherit;font-size:16px;min-height:48px}.settings-panel select:focus-visible{outline:3px solid #3165d3;outline-offset:3px}.role-help{display:block;margin-top:8px;font-size:13px;line-height:1.65;color:#50617c;font-weight:400}.role-badge{display:inline-block;padding:4px 10px;border-radius:6px;background:#e9f0fc;color:#2d508c;font-size:13px;font-weight:650}.role-badge.admin{background:#eee8fc;color:#6440a0}
+
+.user-form-title{grid-column:1/-1;margin:0;color:#2c4263;font-size:20px}.settings-panel input[readonly]{background:#edf1f7;color:#52617a;border-color:#c6cfdd;cursor:default}
