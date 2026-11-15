@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import AppArtwork from './AppArtwork';
 import Settings from './Settings';
 
 const menus = [
@@ -46,9 +47,9 @@ export default function Home({ user, onLogout }) {
         <div className="launcher-account"><span className="online-status">Workspace online</span><button className="profile-button" title={user.fullName} aria-label={`View profile for ${user.fullName}`} onClick={() => setSelected(['profile', 'Your profile', '', '#087b57', 'team'])}>{initials}</button></div>
       </header>
       {selected?.[0]==='settings' ? <Settings user={user} onBack={()=>setSelected(null)}/> : <main className="launcher-main">
-        <div className="workspace-overview"><div className="launcher-intro"><span className="launcher-eyebrow">YOUR SUPPORT WORKSPACE</span><h1>Welcome, {user.fullName.trim().split(/\s+/)[0]}<span>.</span></h1><p>A clear view of your tools, team, and workspace.</p><div className="workspace-context"><span>Organization <strong>{user.organizationId}</strong></span><span className="workspace-role">{user.role==='admin'?'Administrator':'User'}</span></div></div><div className="workspace-quick"><span className="quick-caption">WORKSPACE MANAGEMENT</span><h2>Keep your team connected.</h2><p>{user.role==='admin'?'Organize your departments, categories, projects, and team access.':"Explore your organization's departments, categories, and projects."}</p><button onClick={()=>setSelected(menus[7])}>Open settings <span aria-hidden="true">&#8594;</span></button></div></div>
-        <div className="apps-heading"><h2>Workspace apps</h2><span>{query ? 'Search results' : 'Choose an app to get started'}</span></div>
-        <div className="app-grid">{menus.filter(menu => `${menu[1]} ${menu[2]}`.toLowerCase().includes(query.toLowerCase())).map(menu => <button key={menu[0]} className="app-tile" style={{'--tile-color':menu[3]}} onClick={() => setSelected(menu)}><span className="app-icon"><Icon name={menu[4]}/></span><span className="app-name">{menu[1]}</span><span className="app-description">{menu[2]}</span>{!['settings'].includes(menu[0])&&<span className="app-status">Coming soon</span>}<span className="tile-arrow" aria-hidden="true">↗</span></button>)}</div>
+        <div className="launcher-intro"><span className="launcher-eyebrow">A LITTLE CLARITY. A LOT OF PROGRESS.</span><h1>Hello, {user.fullName.trim().split(/\s+/)[0]}<span>.</span></h1><p>Everything you need. One place to begin.</p></div>
+        <div className="apps-heading"><h2>Your workspace</h2><span>{query ? 'Search results' : 'Choose an app to get started'}</span></div>
+        <div className="app-grid">{menus.filter(menu => `${menu[1]} ${menu[2]}`.toLowerCase().includes(query.toLowerCase())).map(menu => <button key={menu[0]} className="app-tile" style={{'--tile-color':menu[3]}} onClick={() => setSelected(menu)}><span className="app-icon"><AppArtwork name={menu[4]}/></span><span className="app-name">{menu[1]}</span><span className="app-description">{menu[2]}</span><span className="tile-arrow" aria-hidden="true">↗</span></button>)}</div>
         {query && !menus.some(menu => `${menu[1]} ${menu[2]}`.toLowerCase().includes(query.toLowerCase())) && <p className="empty-search" role="status">No apps found for “{query}”. Try another name.</p>}
         {error && <p className="launcher-error" role="alert">{error}</p>}
       </main>}
