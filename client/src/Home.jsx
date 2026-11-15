@@ -3,6 +3,8 @@ import AppArtwork from './AppArtwork';
 import Settings from './Settings';
 import Assets from './Assets';
 import Payables from './Payables';
+import WorkspaceDrawer from './WorkspaceDrawer';
+import CompanyProfile from './CompanyProfile';
 
 const menus = [
   ['tickets', 'My tickets', 'Your support conversations', '#215bc4', 'ticket'],
@@ -35,6 +37,7 @@ function Icon({ name, ...props }) {
 }
 
 export default function Home({ user, onLogout }) {
+  const [drawerOpen,setDrawerOpen]=useState(false);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(null);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -46,12 +49,12 @@ export default function Home({ user, onLogout }) {
   }
   return <div className="launcher">
     <div className="launcher-shell">
-      <header className="launcher-header">
+      <header className="launcher-header"><button className="drawer-toggle" aria-label="Open navigation menu" aria-expanded={drawerOpen} aria-controls="workspace-drawer" onClick={()=>setDrawerOpen(true)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
         <a href="/" className="launcher-brand"><span className="launcher-mark">s<span>·</span></span><span>SupportDesk<small>YOUR WORKSPACE, CONNECTED</small></span></a>
         <label className="launcher-search"><Icon name="search"/><input aria-label="Search apps" placeholder="Find an app…" value={query} onChange={event => setQuery(event.target.value)}/>{query && <button aria-label="Clear search" onClick={() => setQuery('')}>×</button>}</label>
         <div className="launcher-account"><span className="online-status">Workspace online</span><button className="profile-button" title={user.fullName} aria-label={`View profile for ${user.fullName}`} onClick={() => setSelected(['profile', 'Your profile', '', '#087b57', 'team'])}>{initials}</button></div>
       </header>
-      {selected?.[0]==='settings' ? <Settings user={user} onBack={()=>setSelected(null)}/> : selected?.[0]==='assets' ? <Assets user={user} onBack={()=>setSelected(null)}/> : selected?.[0]==='payble' ? <Payables user={user} onBack={()=>setSelected(null)}/> : <main className="launcher-main">
+      {selected?.[0]==='settings' ? <Settings user={user} onBack={()=>setSelected(null)}/> : selected?.[0]==='assets' ? <Assets user={user} onBack={()=>setSelected(null)}/> : selected?.[0]==='payble' ? <Payables user={user} onBack={()=>setSelected(null)}/> : selected?.[0]==='company' ? <CompanyProfile user={user} onBack={()=>setSelected(null)}/> : <main className="launcher-main">
         <div className="launcher-intro"><span className="launcher-eyebrow">A LITTLE CLARITY. A LOT OF PROGRESS.</span><h1>Hello, {user.fullName.trim().split(/\s+/)[0]}<span>.</span></h1><p>Everything you need. One place to begin.</p></div>
         <div className="apps-heading"><h2>Your workspace</h2><span>{query ? 'Search results' : 'Choose an app to get started'}</span></div>
         <div className="app-grid">{menus.filter(menu => `${menu[1]} ${menu[2]}`.toLowerCase().includes(query.toLowerCase())).map(menu => <button key={menu[0]} className="app-tile" style={{'--tile-color':menu[3]}} onClick={() => setSelected(menu)}><span className="app-icon"><AppArtwork name={menu[4]}/></span><span className="app-name">{menu[1]}</span><span className="app-description">{menu[2]}</span><span className="tile-arrow" aria-hidden="true">↗</span></button>)}</div>
@@ -60,6 +63,7 @@ export default function Home({ user, onLogout }) {
       </main>}
       <footer className="launcher-footer"><span>Simple. Connected. Supported.</span><nav className="launcher-dock" aria-label="Workspace shortcuts"><button className="dock-active" aria-label="Home" onClick={() => { setQuery(''); setSelected(null); }}><Icon name="home"/></button>{[menus[0], menus[1], menus[3]].map(menu => <button key={menu[0]} aria-label={menu[1]} style={{color:menu[3]}} onClick={() => setSelected(menu)}><Icon name={menu[4]}/></button>)}<span className="dock-divider"/><button aria-label="Sign out" title="Sign out" disabled={loggingOut} onClick={logout}><Icon name="exit"/></button></nav><span>SupportDesk · Your space to resolve</span></footer>
     </div>
-    {selected && !['settings','assets','payble'].includes(selected[0]) && <div className="app-modal-backdrop" onClick={() => setSelected(null)}><section className="app-modal" role="dialog" aria-modal="true" aria-labelledby="app-modal-title" onClick={event => event.stopPropagation()} onKeyDown={event => {if(event.key === 'Escape') setSelected(null);}}><span className="modal-icon" style={{color:selected[3]}}><Icon name={selected[4]}/></span><h2 id="app-modal-title">{selected[1]}</h2>{selected[0] === 'profile' ? <><p>{user.fullName}</p><p>{user.email}</p><p>Username: {user.username}</p><p>Organization ID: {user.organizationId}</p></> : <p>This app is coming soon. Your workspace is ready; {selected[1].toLowerCase()} will be available when this module is connected.</p>}<button autoFocus onClick={() => setSelected(null)}>Back to workspace</button></section></div>}
+    {drawerOpen&&<WorkspaceDrawer organizationId={user.organizationId} onClose={()=>setDrawerOpen(false)} onNavigate={page=>{setSelected(page?['company']:null);setQuery('');setDrawerOpen(false);}}/>}
+    {selected && !['settings','assets','payble','company'].includes(selected[0]) && <div className="app-modal-backdrop" onClick={() => setSelected(null)}><section className="app-modal" role="dialog" aria-modal="true" aria-labelledby="app-modal-title" onClick={event => event.stopPropagation()} onKeyDown={event => {if(event.key === 'Escape') setSelected(null);}}><span className="modal-icon" style={{color:selected[3]}}><Icon name={selected[4]}/></span><h2 id="app-modal-title">{selected[1]}</h2>{selected[0] === 'profile' ? <><p>{user.fullName}</p><p>{user.email}</p><p>Username: {user.username}</p><p>Organization ID: {user.organizationId}</p></> : <p>This app is coming soon. Your workspace is ready; {selected[1].toLowerCase()} will be available when this module is connected.</p>}<button autoFocus onClick={() => setSelected(null)}>Back to workspace</button></section></div>}
   </div>;
 }
