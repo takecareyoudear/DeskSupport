@@ -31,13 +31,13 @@ The PostgreSQL integration test uses an isolated in-memory PGlite database, not 
 
 ## Assets
 
-Open **Assets** from the home screen. Admins can create, view, edit, and delete organization-scoped **Asset types**, **Asset categories**, and **Asset register** records. Members have read-only access.
+Open **Assets** from the home screen. Admins can create, view, edit, and delete organization-scoped **Category master** and **Asset register** records. Members have read-only access.
 
-Create types with a name and movable/immovable movement, then categories with physical/virtual nature and hardware, computer, laptop, land, building, vehicle, software, subscription, or other classification. For example: Property / Immovable, Homes / Physical / Building; Equipment / Movable, Laptops / Physical / Laptop; Licenses / Movable, SaaS / Virtual / Subscription.
+When creating an asset, select **Movable**, **Immovable**, or **Virtual**, then choose a matching category. **Category master** supports CRUD: enter a category name (Car/Bike, Staff, Building, Subscription, Shop, Apartment, Home, or another name), its asset type, and whether it is a subscription. The category dropdown filters by type and clears when the type changes.
 
-Each asset requires a name, type, and category. Optional fields include start, end, and renewal dates; insurance provider, policy number, insurance start/end/renewal dates; and notes. Renewal dates are recorded for reference; automatic reminders are not implemented. Names are unique within each asset list and organization. Referenced types/categories cannot be deleted, and cross-organization references are rejected.
+Subscription assets require renewal and expiry dates. Every asset supports multiline remarks, shown in the register, plus optional insurance details. Category type/subscription settings cannot change while the category is used; rename is allowed. Existing records and legacy insurance/date fields are preserved by a repeatable startup migration. Automatic reminders are not implemented.
 
-The API automatically applies the repeatable `server/src/assets.sql` migration at startup. Vercel bundles all SQL migrations. Integration checks cover asset CRUD, master deletion restrictions, organization isolation, role permissions, invalid dates, subscription categories, and insurance persistence.
+The API applies `server/src/assets.sql` at startup. Vercel bundles all SQL migrations. Integration checks cover category and asset CRUD, type/category matching, required subscription dates, multiline remarks, master deletion restrictions, organization isolation, and role permissions.
 
 ## Authentication checks
 

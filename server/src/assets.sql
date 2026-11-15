@@ -26,4 +26,13 @@ CREATE TABLE IF NOT EXISTS assets (
  CHECK(insurance_end_date IS NULL OR insurance_start_date IS NULL OR insurance_end_date>=insurance_start_date)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS assets_name ON assets(organization_id,lower(name));
+-- Preserve existing records while introducing the corrected type/category model.
+ALTER TABLE asset_categories ADD COLUMN IF NOT EXISTS asset_type varchar(12);
+UPDATE asset_categories c SET asset_type=CASE WHEN nature='virtual' THEN 'virtual' ELSE COALESCE((SELECT t.movement FROM assets a JOIN asset_types t ON t.id=a.type_id WHERE a.category_id=c.id ORDER BY a.id LIMIT 1),'movable') END WHERE asset_type IS NULL;
+ALTER TABLE asset_categories ALTER COLUMN asset_type SET NOT NULL;
+ALTER TABLE assets ADD COLUMN IF NOT EXISTS asset_type varchar(12);
+UPDATE assets a SET asset_type=CASE WHEN c.nature='virtual' THEN 'virtual' ELSE t.movement END
+FROM asset_categories c,asset_types t WHERE a.category_id=c.id AND a.type_id=t.id AND a.asset_type IS NULL;
+ALTER TABLE assets ALTER COLUMN asset_type SET NOT NULL;
+ALTER TABLE assets ALTER COLUMN type_id DROP NOT NULL;
 COMMIT;

@@ -2,35 +2,46 @@ import { randomUUID } from 'node:crypto';
 const uuid=value=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 const text=(value,max)=>typeof value==='string'&&value.trim().length<=max;
 const date=value=>value===null||value===''||value===undefined||(typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&!isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value);
-const classifications=['hardware','computer','laptop','land','building','vehicle','software','subscription','other'];
+const assetTypes=['movable','immovable','virtual'];
 export function registerAssets(app,{pool}) {
  const base='/api/auth/workspace/assets';
  app.get(base,async(req,res)=>{
   const org=[req.account.organization_id];
-  const types=(await pool.query('SELECT id,name,movement FROM asset_types WHERE organization_id=$1 ORDER BY lower(name)',org)).rows;
-  const categories=(await pool.query('SELECT id,name,nature,classification FROM asset_categories WHERE organization_id=$1 ORDER BY lower(name)',org)).rows;
+
+  const categories=(await pool.query('SELECT id,name,asset_type,classification FROM asset_categories WHERE organization_id=$1 ORDER BY lower(name)',org)).rows;
   const assets=(await pool.query('SELECT * FROM assets WHERE organization_id=$1 ORDER BY lower(name)',org)).rows;
-  res.json({types,categories,assets});
+  res.json({categories,assets});
  });
  app.post(`${base}/:kind/:action`,async(req,res)=>{
   const {kind,action}=req.params;
-  const table={types:'asset_types',categories:'asset_categories',assets:'assets'}[kind];
+  const table={categories:'asset_categories',assets:'assets'}[kind];
   if(!table||!['create','update','delete'].includes(action))return res.status(404).json({error:'Unknown asset operation.'});
   const body=req.body,org=req.account.organization_id;
   if(action!=='create'&&!uuid(body.id))return res.status(400).json({error:'Choose a valid record.'});
+  if(action==='update'){
+   const target=await pool.query(`SELECT id FROM ${table} WHERE id=$1 AND organization_id=$2`,[body.id,org]);
+   if(!target.rows.length)return res.status(404).json({error:'Record not found in your organization.'});
+  }
   let columns=[],values=[];
   if(action!=='delete'){
    if(!text(body.name,100)||!body.name.trim())return res.status(400).json({error:'Enter a name of 1-100 characters.'});
    columns=['name'];values=[body.name.trim()];
-   if(kind==='types'){
-    if(!['movable','immovable'].includes(body.movement))return res.status(400).json({error:'Choose movable or immovable.'});
-    columns.push('movement');values.push(body.movement);
-   }else if(kind==='categories'){
-    if(!['physical','virtual'].includes(body.nature)||!classifications.includes(body.classification))return res.status(400).json({error:'Choose a valid asset nature and classification.'});
-    columns.push('nature','classification');values.push(body.nature,body.classification);
+   if(!assetTypes.includes(body.asset_type))return res.status(400).json({error:'Choose Movable, Immovable, or Virtual.'});
+   columns.push('asset_type');values.push(body.asset_type);
+   if(kind==='categories'){
+    if(typeof body.is_subscription!=='boolean')return res.status(400).json({error:'Choose whether this category is a subscription.'});
+    columns.push('nature','classification');values.push(body.asset_type==='virtual'?'virtual':'physical',body.is_subscription?'subscription':'other');
+    if(action==='update'){
+     const used=await pool.query('SELECT id FROM assets WHERE category_id=$1 AND organization_id=$2 LIMIT 1',[body.id,org]);
+     const old=(await pool.query('SELECT asset_type,classification FROM asset_categories WHERE id=$1 AND organization_id=$2',[body.id,org])).rows[0];
+     if(used.rows.length&&old&&(old.asset_type!==body.asset_type||(old.classification==='subscription')!==body.is_subscription))return res.status(409).json({error:'This category is in use. Its type and subscription setting cannot be changed.'});
+    }
    }else{
-    if(!uuid(body.type_id)||!uuid(body.category_id))return res.status(400).json({error:'Choose an asset type and category.'});
-    columns.push('type_id','category_id');values.push(body.type_id,body.category_id);
+    if(!uuid(body.category_id))return res.status(400).json({error:'Choose a category.'});
+    const category=(await pool.query('SELECT asset_type,classification FROM asset_categories WHERE id=$1 AND organization_id=$2',[body.category_id,org])).rows[0];
+    if(!category||category.asset_type!==body.asset_type)return res.status(400).json({error:'Choose a category belonging to the selected asset type.'});
+    if(category.classification==='subscription'&&(!body.end_date||!body.renewal_date))return res.status(400).json({error:'Subscription assets require expiry and renewal dates.'});
+    columns.push('category_id');values.push(body.category_id);
     for(const key of ['start_date','end_date','renewal_date','insurance_start_date','insurance_end_date','insurance_renewal_date']){
      if(!date(body[key]))return res.status(400).json({error:'Enter valid calendar dates.'});
      columns.push(key);values.push(body[key]||null);

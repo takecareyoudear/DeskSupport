@@ -120,46 +120,47 @@ test('PostgreSQL migration, signup, username login and organization-scoped Maste
   const assetBase='workspace/assets';
   assert.equal((await request(assetBase)).status,401);
   assert.equal((await request(assetBase,undefined,member.cookie)).status,200);
-  assert.equal((await request(`${assetBase}/types/create`,{name:'Vehicles',movement:'movable'},member.cookie)).status,403);
-  assert.equal((await request(`${assetBase}/types/create`,{name:'Vehicles',movement:'movable'},cookie,'https://foreign.example')).status,403);
-  const assetType=await request(`${assetBase}/types/create`,{name:'Vehicles',movement:'movable'},cookie);
-  assert.equal(assetType.status,201);
-  const typeId=assetType.body.record.id;
-  assert.equal((await request(`${assetBase}/types/create`,{name:'vehicles',movement:'movable'},cookie)).status,409);
-  assert.equal((await request(`${assetBase}/types/create`,{name:'Invalid',movement:'flying'},cookie)).status,400);
-  const category=await request(`${assetBase}/categories/create`,{name:'Cars',nature:'physical',classification:'vehicle'},cookie);
-  assert.equal(category.status,201);
+  const carCategory={name:'Car / Bike',asset_type:'movable',is_subscription:false};
+  assert.equal((await request(`${assetBase}/categories/create`,carCategory,member.cookie)).status,403);
+  assert.equal((await request(`${assetBase}/categories/create`,carCategory,cookie,'https://foreign.example')).status,403);
+  const category=await request(`${assetBase}/categories/create`,carCategory,cookie);
+  assert.equal(category.status,201,JSON.stringify(category.body));
   const categoryId=category.body.record.id;
-  const assetBody={name:'Company car',type_id:typeId,category_id:categoryId,start_date:'2026-01-01',end_date:'2026-12-31',renewal_date:'2026-12-15',insurer:'Insurance Co',policy_number:'CAR-001',insurance_start_date:'2026-01-01',insurance_end_date:'2026-12-31',insurance_renewal_date:'2026-12-20',notes:'Main office vehicle'};
+  assert.equal((await request(`${assetBase}/categories/create`,{...carCategory,name:'car / bike'},cookie)).status,409);
+  assert.equal((await request(`${assetBase}/categories/create`,{...carCategory,asset_type:'physical'},cookie)).status,400);
+  const building=await request(`${assetBase}/categories/create`,{name:'Building',asset_type:'immovable',is_subscription:false},cookie);
+  const subscriptionCategory=await request(`${assetBase}/categories/create`,{name:'Subscription',asset_type:'virtual',is_subscription:true},cookie);
+  assert.equal(building.status,201);assert.equal(subscriptionCategory.status,201);
+  const assetBody={name:'Company car',asset_type:'movable',category_id:categoryId,insurer:'Insurance Co',policy_number:'CAR-001',notes:'Company vehicle\nParked at the main office'};
   const asset=await request(`${assetBase}/assets/create`,assetBody,cookie);
   assert.equal(asset.status,201,JSON.stringify(asset.body));
   const assetId=asset.body.record.id;
-  assert.equal(asset.body.record.insurer,'Insurance Co');
+  assert.equal(asset.body.record.notes,assetBody.notes);
   assert.equal(asset.body.record.policy_number,'CAR-001');
-  for(const invalid of [{start_date:'2026-02-30'},{end_date:'2025-01-01'},{insurance_end_date:'2025-01-01'},{category_id:'invalid'},{notes:'x'.repeat(2001)}]){
-   assert.equal((await request(`${assetBase}/assets/create`,{...assetBody,...invalid},cookie)).status,400);
-  }
-  assert.equal((await request(`${assetBase}/categories/create`,{name:'Invalid',nature:'physical',classification:'unknown'},cookie)).status,400);
-  const foreignType=await request(`${assetBase}/types/create`,{name:'Property',movement:'immovable'},legacyLogin.cookie);
-  assert.equal((await request(`${assetBase}/assets/create`,{...assetBody,name:'Foreign reference',type_id:foreignType.body.record.id},cookie)).status,409);
+  assert.equal((await request(`${assetBase}/assets/create`,{...assetBody,name:'Mismatch',asset_type:'immovable'},cookie)).status,400);
+  assert.equal((await request(`${assetBase}/categories/update`,{...carCategory,id:categoryId,asset_type:'virtual'},cookie)).status,409);
+  assert.equal((await request(`${assetBase}/categories/update`,{...carCategory,id:categoryId,is_subscription:true},cookie)).status,409);
+  for(const invalid of [{end_date:'2026-02-30'},{category_id:'invalid'},{notes:'x'.repeat(2001)}])assert.equal((await request(`${assetBase}/assets/create`,{...assetBody,...invalid},cookie)).status,400);
+  const foreignCategory=await request(`${assetBase}/categories/create`,carCategory,legacyLogin.cookie);
+  assert.equal((await request(`${assetBase}/assets/create`,{...assetBody,category_id:foreignCategory.body.record.id},cookie)).status,400);
   assert.equal((await request(assetBase,undefined,legacyLogin.cookie)).body.assets.length,0);
-  for(const [kind,id,payload] of [['types',typeId,{name:'Updated type',movement:'movable'}],['categories',categoryId,{name:'Updated category',nature:'physical',classification:'vehicle'}],['assets',assetId,{...assetBody,name:'Updated asset'}]]){
+  for(const [kind,id,payload] of [['categories',categoryId,{...carCategory,name:'Cars'}],['assets',assetId,{...assetBody,name:'Updated car'}]]){
    assert.equal((await request(`${assetBase}/${kind}/update`,{...payload,id},legacyLogin.cookie)).status,404);
    assert.equal((await request(`${assetBase}/${kind}/delete`,{id},legacyLogin.cookie)).status,404);
    assert.equal((await request(`${assetBase}/${kind}/update`,{...payload,id},cookie)).status,200);
   }
-  assert.equal((await request(`${assetBase}/types/delete`,{id:typeId},cookie)).status,409);
   assert.equal((await request(`${assetBase}/categories/delete`,{id:categoryId},cookie)).status,409);
+  const subscription={name:'Office software',asset_type:'virtual',category_id:subscriptionCategory.body.record.id,notes:'Annual license\nRenew through vendor'};
+  assert.equal((await request(`${assetBase}/assets/create`,subscription,cookie)).status,400,'subscription dates required');
+  assert.equal((await request(`${assetBase}/assets/create`,{...subscription,end_date:'2026-12-31'},cookie)).status,400,'renewal required');
+  const subscribed=await request(`${assetBase}/assets/create`,{...subscription,end_date:'2026-12-31',renewal_date:'2026-12-15'},cookie);
+  assert.equal(subscribed.status,201);
   const inventory=(await request(assetBase,undefined,member.cookie)).body;
-  assert.equal(inventory.assets[0].name,'Updated asset');
-  assert.equal(inventory.assets[0].insurance_renewal_date.slice(0,10),'2026-12-20');
+  assert.equal(inventory.assets.find(row=>row.id===assetId).notes,assetBody.notes);
+  assert.equal(inventory.assets.find(row=>row.id===subscribed.body.record.id).end_date.slice(0,10),'2026-12-31');
+  assert.equal((await request(`${assetBase}/assets/delete`,{id:subscribed.body.record.id},cookie)).status,200);
   assert.equal((await request(`${assetBase}/assets/delete`,{id:assetId},cookie)).status,200);
-  assert.equal((await request(`${assetBase}/categories/update`,{id:categoryId,name:'Software subscriptions',nature:'virtual',classification:'subscription'},cookie)).status,200);
-  const subscription=await request(`${assetBase}/assets/create`,{...assetBody,name:'Office software',category_id:categoryId,insurer:'',policy_number:''},cookie);
-  assert.equal(subscription.status,201);
-  assert.equal((await request(`${assetBase}/assets/delete`,{id:subscription.body.record.id},cookie)).status,200);
   assert.equal((await request(`${assetBase}/categories/delete`,{id:categoryId},cookie)).status,200);
-  assert.equal((await request(`${assetBase}/types/delete`,{id:typeId},cookie)).status,200);
   const editPath=`workspace/users/${user.body.user.id}/update`;
   const changes={fullName:'Updated Member',role:'admin',password:''};
   assert.equal((await request(editPath,changes,member.cookie)).status,403);
@@ -189,4 +190,26 @@ test('PostgreSQL migration, signup, username login and organization-scoped Maste
   assert.equal((await request(`workspace/users/${legacyId}/update`,{fullName:'Legacy Owner',role:'member'},legacyLogin.cookie)).status,409,'last admin cannot be demoted');
   await request('logout',{},cookie);
   assert.equal((await request(base,undefined,cookie)).status,401,'logout revokes workspace access');
+});
+
+
+test('asset migration preserves legacy assets, categories, insurance and remarks',async()=>{
+ const db=new PGlite();
+ try{
+  await db.exec(readFileSync(new URL('../src/schema.sql',import.meta.url),'utf8'));
+  await db.exec(readFileSync(new URL('../src/organizations.sql',import.meta.url),'utf8'));
+  const migration=readFileSync(new URL('../src/assets.sql',import.meta.url),'utf8');
+  await db.exec(migration.split('-- Preserve existing records')[0]+'COMMIT;');
+  await db.exec("INSERT INTO organizations(id) VALUES(123456)");
+  const typeId=randomUUID(),categoryId=randomUUID(),assetId=randomUUID();
+  await db.query("INSERT INTO asset_types VALUES($1,123456,'Property','immovable')",[typeId]);
+  await db.query("INSERT INTO asset_categories VALUES($1,123456,'Home','physical','building')",[categoryId]);
+  await db.query("INSERT INTO assets(id,organization_id,name,type_id,category_id,insurer,notes) VALUES($1,123456,'Existing home',$2,$3,'Existing insurer','Line one\nLine two')",[assetId,typeId,categoryId]);
+  await db.exec(migration);await db.exec(migration);
+  const asset=(await db.query('SELECT * FROM assets WHERE id=$1',[assetId])).rows[0];
+  assert.equal(asset.asset_type,'immovable');
+  assert.equal(asset.insurer,'Existing insurer');
+  assert.equal(asset.notes,'Line one\nLine two');
+  assert.equal((await db.query('SELECT asset_type FROM asset_categories WHERE id=$1',[categoryId])).rows[0].asset_type,'immovable');
+ }finally{await db.close();}
 });
