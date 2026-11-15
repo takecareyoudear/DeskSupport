@@ -5,7 +5,7 @@
   "functions": {
     "api/index.mjs": {
       "maxDuration": 60,
-      "includeFiles": "server/src/schema.sql"
+      "includeFiles": "server/src/*.sql"
     }
   },
   "rewrites": [

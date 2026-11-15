@@ -29,6 +29,16 @@ On API restart/deployment, `server/src/organizations.sql` applies the schema mig
 
 The PostgreSQL integration test uses an isolated in-memory PGlite database, not the configured live database. It checks repeatable migrations, existing-account migration, registration transactions, login, independent Master CRUD, foreign-key restrictions, permissions, and organization isolation. Run `npm test --workspace server` and `npm run build`.
 
+## Assets
+
+Open **Assets** from the home screen. Admins can create, view, edit, and delete organization-scoped **Asset types**, **Asset categories**, and **Asset register** records. Members have read-only access.
+
+Create types with a name and movable/immovable movement, then categories with physical/virtual nature and hardware, computer, laptop, land, building, vehicle, software, subscription, or other classification. For example: Property / Immovable, Homes / Physical / Building; Equipment / Movable, Laptops / Physical / Laptop; Licenses / Movable, SaaS / Virtual / Subscription.
+
+Each asset requires a name, type, and category. Optional fields include start, end, and renewal dates; insurance provider, policy number, insurance start/end/renewal dates; and notes. Renewal dates are recorded for reference; automatic reminders are not implemented. Names are unique within each asset list and organization. Referenced types/categories cannot be deleted, and cross-organization references are rejected.
+
+The API automatically applies the repeatable `server/src/assets.sql` migration at startup. Vercel bundles all SQL migrations. Integration checks cover asset CRUD, master deletion restrictions, organization isolation, role permissions, invalid dates, subscription categories, and insurance persistence.
+
 ## Authentication checks
 
 Password recovery is available from **Forgot password?** on the login form. A separate, hashed six-digit email code expires after ten minutes, allows five guesses, and has a sixty-second resend cooldown. Resetting the password consumes the code and revokes all existing sessions. The API creates the `password_resets` table on startup. Recovery uses the existing SMTP settings and returns the same send response for registered and unknown addresses.

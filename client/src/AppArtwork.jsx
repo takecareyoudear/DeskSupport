@@ -4,6 +4,7 @@ import React, { useId } from 'react';
 export default function AppArtwork({ name }) {
   const id = useId().replace(/:/g, '');
   const palettes = {
+    assets: ['#72e0d6', '#159b9b', '#13536b'],
     ticket: ['#49c8ff', '#2262e5', '#142b91'],
     plus: ['#4de1b2', '#0a9c79', '#075044'],
     chat: ['#c99cff', '#8651e9', '#472184'],
@@ -17,6 +18,7 @@ export default function AppArtwork({ name }) {
   const front = `url(#${id}-front)`;
   const paper = `url(#${id}-paper)`;
   const art = {
+    assets: <><path d="m8 19 24-11 24 11v29L32 59 8 48Z" fill={front}/><path d="m8 19 24 11 24-11M32 30v29M20 14l24 11v10" stroke={paper} strokeWidth="3" strokeLinejoin="round"/><path d="m16 38 8 4" stroke={paper} strokeWidth="3" strokeLinecap="round"/></>,
     ticket: <><path d="m12 24 37-7 6 30-37 7-2-9a5 5 0 0 0-2-10Z" fill={dark} opacity=".28"/><path d="m9 19 37-7 6 30-37 7-2-9a5 5 0 0 0-2-10Z" fill={front}/><path d="m36 17 4 23" stroke="white" strokeOpacity=".7" strokeWidth="2" strokeDasharray="3 4"/><path d="m21 26 2 4 5-1-3 4 2 5-5-2-4 3 1-5-3-3 5-1Z" fill={paper}/></>,
     plus: <><rect x="15" y="15" width="38" height="39" rx="11" fill={dark} opacity=".25"/><rect x="10" y="10" width="40" height="40" rx="11" fill={front}/><path d="M30 21v18M21 30h18" stroke={paper} strokeWidth="5" strokeLinecap="round"/><circle cx="49" cy="48" r="10" fill={paper}/><path d="m45 48 3 3 5-6" fill="none" stroke={dark} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/></>,
     chat: <><path d="M27 24h20a11 11 0 0 1 11 11v7a11 11 0 0 1-9 11l4 7-14-7H27a11 11 0 0 1-11-11v-7a11 11 0 0 1 11-11" fill={dark} opacity=".85"/><path d="M16 10h23a12 12 0 0 1 12 12v9a12 12 0 0 1-12 12H24L10 51l3-9a12 12 0 0 1-9-11v-9a12 12 0 0 1 12-12" fill={front}/>{[18,28,38].map(x=><circle key={x} cx={x} cy="27" r="2.5" fill={paper}/>)}</>,
