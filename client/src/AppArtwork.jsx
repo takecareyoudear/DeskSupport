@@ -4,6 +4,7 @@ import React, { useId } from 'react';
 export default function AppArtwork({ name }) {
   const id = useId().replace(/:/g, '');
   const palettes = {
+    payble: ['#ffe08a', '#e8a43a', '#8c4e17'],
     assets: ['#72e0d6', '#159b9b', '#13536b'],
     ticket: ['#49c8ff', '#2262e5', '#142b91'],
     plus: ['#4de1b2', '#0a9c79', '#075044'],
@@ -18,6 +19,7 @@ export default function AppArtwork({ name }) {
   const front = `url(#${id}-front)`;
   const paper = `url(#${id}-paper)`;
   const art = {
+    payble: <><rect x="12" y="6" width="40" height="52" rx="9" fill={front}/><path d="M22 18h20M22 25h14M22 46h20" stroke={paper} strokeWidth="3" strokeLinecap="round"/><circle cx="32" cy="36" r="7" fill={paper}/><path d="M32 31v10m3-8h-4a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-4" stroke={dark} strokeWidth="1.6"/></>,
     assets: <><path d="m8 19 24-11 24 11v29L32 59 8 48Z" fill={front}/><path d="m8 19 24 11 24-11M32 30v29M20 14l24 11v10" stroke={paper} strokeWidth="3" strokeLinejoin="round"/><path d="m16 38 8 4" stroke={paper} strokeWidth="3" strokeLinecap="round"/></>,
     ticket: <><path d="m12 24 37-7 6 30-37 7-2-9a5 5 0 0 0-2-10Z" fill={dark} opacity=".28"/><path d="m9 19 37-7 6 30-37 7-2-9a5 5 0 0 0-2-10Z" fill={front}/><path d="m36 17 4 23" stroke="white" strokeOpacity=".7" strokeWidth="2" strokeDasharray="3 4"/><path d="m21 26 2 4 5-1-3 4 2 5-5-2-4 3 1-5-3-3 5-1Z" fill={paper}/></>,
     plus: <><rect x="15" y="15" width="38" height="39" rx="11" fill={dark} opacity=".25"/><rect x="10" y="10" width="40" height="40" rx="11" fill={front}/><path d="M30 21v18M21 30h18" stroke={paper} strokeWidth="5" strokeLinecap="round"/><circle cx="49" cy="48" r="10" fill={paper}/><path d="m45 48 3 3 5-6" fill="none" stroke={dark} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/></>,

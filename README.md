@@ -39,6 +39,12 @@ Subscription assets require an expiry date and recurring renewal schedule. Choos
 
 The API applies `server/src/assets.sql` at startup. Vercel bundles all SQL migrations. Integration checks cover category and asset CRUD, type/category matching, required subscription dates, multiline remarks, master deletion restrictions, organization isolation, and role permissions.
 
+## Payble
+
+Open **Payble** on the home screen to manage recurring expenses such as telephone bills. Admins can create, view, edit, and delete expenses in their organization; members can view them. Each expense records name, positive amount (up to two decimal places), currency (INR by default), weekly/monthly/yearly frequency, first due date, and multiline remarks.
+
+The list shows the next scheduled due date including its year. Weekly repeats every seven days from the first due date; monthly and yearly follow its day/month, clamping to the last day of shorter months. The first due date is respected for future schedules and today is included. Payment history, overdue balances, reminders, and automatic payments are not implemented. The API applies the repeatable `server/src/payables.sql` migration at startup.
+
 ## Authentication checks
 
 Password recovery is available from **Forgot password?** on the login form. A separate, hashed six-digit email code expires after ten minutes, allows five guesses, and has a sixty-second resend cooldown. Resetting the password consumes the code and revokes all existing sessions. The API creates the `password_resets` table on startup. Recovery uses the existing SMTP settings and returns the same send response for registered and unknown addresses.

@@ -6,6 +6,7 @@ import { PGlite } from '@electric-sql/pglite';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import { registerAccounts } from '../src/accounts.js';
+import { registerPayables } from '../src/payables.js';
 import { registerAssets } from '../src/assets.js';
 import { registerWorkspace } from '../src/workspace.js';
 import { hashPassword } from '../src/security.js';
@@ -23,6 +24,8 @@ test('PostgreSQL migration, signup, username login and organization-scoped Maste
   await db.exec(migration); // Safe on subsequent application startups.
   const assetMigration=readFileSync(new URL('../src/assets.sql',import.meta.url),'utf8');
   await db.exec(assetMigration);await db.exec(assetMigration);
+  const payableMigration=readFileSync(new URL('../src/payables.sql',import.meta.url),'utf8');
+  await db.exec(payableMigration);await db.exec(payableMigration);
   const legacy=(await db.query('SELECT * FROM users WHERE id=$1',[legacyId])).rows[0];
   assert.match(String(legacy.organization_id),/^[1-9][0-9]{5}$/);
   assert.equal(legacy.role,'admin');
@@ -38,6 +41,7 @@ test('PostgreSQL migration, signup, username login and organization-scoped Maste
   await registerAccounts(app,{pool,cookieOptions:{path:'/api/auth'},sessionCookie,tokenSecret:secret});
   registerWorkspace(app,{pool,sessionCookie,origin});
   registerAssets(app,{pool});
+  registerPayables(app,{pool});
   app.use((error,_req,res,_next)=>res.status(500).json({error:error.message}));
   const server=app.listen(0,'127.0.0.1');
   await new Promise(resolve=>server.once('listening',resolve));
@@ -169,6 +173,28 @@ test('PostgreSQL migration, signup, username login and organization-scoped Maste
   assert.equal((await request(`${assetBase}/assets/delete`,{id:subscribed.body.record.id},cookie)).status,200);
   assert.equal((await request(`${assetBase}/assets/delete`,{id:assetId},cookie)).status,200);
   assert.equal((await request(`${assetBase}/categories/delete`,{id:categoryId},cookie)).status,200);
+  const payableBase='workspace/payables';
+  const bill={name:'Telephone bill',amount:'799.50',currency:'INR',frequency:'monthly',first_due_date:'2026-01-31',remarks:'Office line\nMonthly bill'};
+  assert.equal((await request(payableBase)).status,401);
+  assert.equal((await request(`${payableBase}/create`,bill,member.cookie)).status,403);
+  assert.equal((await request(`${payableBase}/create`,bill,cookie,'https://foreign.example')).status,403);
+  const payable=await request(`${payableBase}/create`,bill,cookie);
+  assert.equal(payable.status,201,JSON.stringify(payable.body));
+  const payableId=payable.body.record.id;
+  assert.equal(Number(payable.body.record.amount),799.5);
+  assert.equal(payable.body.record.remarks,bill.remarks);
+  assert.equal((await request(payableBase,undefined,member.cookie)).body.payables.length,1);
+  assert.equal((await request(payableBase,undefined,legacyLogin.cookie)).body.payables.length,0);
+  assert.equal((await request(`${payableBase}/update`,{...bill,id:payableId},legacyLogin.cookie)).status,404);
+  assert.equal((await request(`${payableBase}/delete`,{id:payableId},legacyLogin.cookie)).status,404);
+  for(const invalid of [{amount:'0'},{amount:'-1'},{amount:'1.234'},{amount:'1000000000'},{amount:'NaN'},{name:''},{currency:'XYZ'},{frequency:'daily'},{first_due_date:'2026-02-30'},{remarks:'x'.repeat(2001)}])assert.equal((await request(`${payableBase}/create`,{...bill,...invalid},cookie)).status,400);
+  for(const frequency of ['weekly','yearly']){
+   const updated=await request(`${payableBase}/update`,{...bill,id:payableId,name:'Updated bill',frequency,amount:'850.25'},cookie);
+   assert.equal(updated.status,200);assert.equal(updated.body.record.frequency,frequency);assert.equal(Number(updated.body.record.amount),850.25);
+  }
+  assert.equal((await request(`${payableBase}/delete`,{id:payableId},member.cookie)).status,403);
+  assert.equal((await request(`${payableBase}/delete`,{id:payableId},cookie)).status,200);
+  assert.equal((await request(payableBase,undefined,cookie)).body.payables.length,0);
   const editPath=`workspace/users/${user.body.user.id}/update`;
   const changes={fullName:'Updated Member',role:'admin',password:''};
   assert.equal((await request(editPath,changes,member.cookie)).status,403);
