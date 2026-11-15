@@ -51,10 +51,12 @@ export function registerWorkspace(app,{pool,sessionCookie,origin}) {
     const email=typeof req.body.email==='string'?req.body.email.trim().toLowerCase():'';
     const fullName=typeof req.body.fullName==='string'?req.body.fullName.trim():'';
     const password=req.body.password;
+    const role=req.body.role===undefined?'member':req.body.role;
+    if(!['member','admin'].includes(role))return res.status(400).json({error:'Choose User or Admin as the user level.'});
     if(!validUsername(username)||email.length>254||!/^\S+@[^\s@]+\.[^\s@]+$/.test(email)||fullName.length<2||fullName.length>100||typeof password!=='string'||password.length<12||password.length>128)
       return res.status(400).json({error:'Enter a full name, username (3-40 letters, numbers, dots or underscores), valid email and password (12-128 characters).'});
     try {
-      const {rows}=await pool.query('INSERT INTO users(id,email,full_name,password_hash,username,organization_id,role) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id,email,full_name,username,organization_id,role',[randomUUID(),email,fullName,await hashPassword(password),username,req.account.organization_id,'member']);
+      const {rows}=await pool.query('INSERT INTO users(id,email,full_name,password_hash,username,organization_id,role) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id,email,full_name,username,organization_id,role',[randomUUID(),email,fullName,await hashPassword(password),username,req.account.organization_id,role]);
       res.status(201).json({user:publicUser(rows[0])});
     } catch(error) {
       if(error.code==='23505')return res.status(409).json({error:'Email or username already exists.'});
