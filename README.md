@@ -41,9 +41,9 @@ The API applies `server/src/assets.sql` at startup. Vercel bundles all SQL migra
 
 ## Payble
 
-Open **Payble** on the home screen to manage recurring expenses such as telephone bills. Admins can create, view, edit, and delete expenses in their organization; members can view them. Each expense records name, positive amount (up to two decimal places), currency (INR by default), weekly/monthly/yearly frequency, first due date, and multiline remarks.
+Open **Payble** on the home screen to manage recurring expenses such as telephone bills. Admins can create, view, edit, and delete expenses in their organization; members can view them. Each expense records name, positive amount (up to two decimal places), currency (INR by default), weekly/monthly/yearly frequency, recurring schedule, and multiline remarks.
 
-The list shows the next scheduled due date including its year. Weekly repeats every seven days from the first due date; monthly and yearly follow its day/month, clamping to the last day of shorter months. The first due date is respected for future schedules and today is included. Payment history, overdue balances, reminders, and automatic payments are not implemented. The API applies the repeatable `server/src/payables.sql` migration at startup.
+The list shows the next scheduled due date including its year. Weekly requires a weekday (Sunday-Saturday), monthly requires a day (1-31), and yearly requires month and day; no year or first due date is entered. Next due uses the viewer's local calendar date, includes today, and clamps to the last day of shorter months. Existing bill dates migrate to the corresponding recurring schedule while preserving names, amounts, currencies, and remarks. Payment history, overdue balances, reminders, and automatic payments are not implemented. The API applies the repeatable `server/src/payables.sql` migration at startup.
 
 ## Authentication checks
 

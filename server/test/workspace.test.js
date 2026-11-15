@@ -174,7 +174,7 @@ test('PostgreSQL migration, signup, username login and organization-scoped Maste
   assert.equal((await request(`${assetBase}/assets/delete`,{id:assetId},cookie)).status,200);
   assert.equal((await request(`${assetBase}/categories/delete`,{id:categoryId},cookie)).status,200);
   const payableBase='workspace/payables';
-  const bill={name:'Telephone bill',amount:'799.50',currency:'INR',frequency:'monthly',first_due_date:'2026-01-31',remarks:'Office line\nMonthly bill'};
+  const bill={name:'Telephone bill',amount:'799.50',currency:'INR',frequency:'monthly',due_day:31,due_month:null,due_weekday:null,remarks:'Office line\nMonthly bill'};
   assert.equal((await request(payableBase)).status,401);
   assert.equal((await request(`${payableBase}/create`,bill,member.cookie)).status,403);
   assert.equal((await request(`${payableBase}/create`,bill,cookie,'https://foreign.example')).status,403);
@@ -187,10 +187,10 @@ test('PostgreSQL migration, signup, username login and organization-scoped Maste
   assert.equal((await request(payableBase,undefined,legacyLogin.cookie)).body.payables.length,0);
   assert.equal((await request(`${payableBase}/update`,{...bill,id:payableId},legacyLogin.cookie)).status,404);
   assert.equal((await request(`${payableBase}/delete`,{id:payableId},legacyLogin.cookie)).status,404);
-  for(const invalid of [{amount:'0'},{amount:'-1'},{amount:'1.234'},{amount:'1000000000'},{amount:'NaN'},{name:''},{currency:'XYZ'},{frequency:'daily'},{first_due_date:'2026-02-30'},{remarks:'x'.repeat(2001)}])assert.equal((await request(`${payableBase}/create`,{...bill,...invalid},cookie)).status,400);
+  for(const invalid of [{amount:'0'},{amount:'-1'},{amount:'1.234'},{amount:'1000000000'},{amount:'NaN'},{name:''},{currency:'XYZ'},{frequency:'daily'},{due_day:32},{due_month:2},{due_day:'15'},{due_weekday:1},{remarks:'x'.repeat(2001)}])assert.equal((await request(`${payableBase}/create`,{...bill,...invalid},cookie)).status,400);
   for(const frequency of ['weekly','yearly']){
-   const updated=await request(`${payableBase}/update`,{...bill,id:payableId,name:'Updated bill',frequency,amount:'850.25'},cookie);
-   assert.equal(updated.status,200);assert.equal(updated.body.record.frequency,frequency);assert.equal(Number(updated.body.record.amount),850.25);
+   const updated=await request(`${payableBase}/update`,{...bill,id:payableId,name:'Updated bill',frequency,amount:'850.25',due_day:frequency==='yearly'?15:null,due_month:frequency==='yearly'?12:null,due_weekday:frequency==='weekly'?1:null},cookie);
+   assert.equal(updated.status,200);assert.equal(updated.body.record.frequency,frequency);assert.equal(Number(updated.body.record.amount),850.25);assert.equal(updated.body.record.due_weekday,frequency==='weekly'?1:null);assert.equal(updated.body.record.due_month,frequency==='yearly'?12:null);
   }
   assert.equal((await request(`${payableBase}/delete`,{id:payableId},member.cookie)).status,403);
   assert.equal((await request(`${payableBase}/delete`,{id:payableId},cookie)).status,200);

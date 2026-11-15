@@ -7,4 +7,10 @@ CREATE TABLE IF NOT EXISTS payables (
  first_due_date date NOT NULL,remarks varchar(2000) NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS payables_organization ON payables(organization_id);
+ALTER TABLE payables ADD COLUMN IF NOT EXISTS due_month integer;
+ALTER TABLE payables ADD COLUMN IF NOT EXISTS due_day integer;
+ALTER TABLE payables ADD COLUMN IF NOT EXISTS due_weekday integer;
+UPDATE payables SET due_weekday=EXTRACT(DOW FROM first_due_date) WHERE frequency='weekly' AND due_weekday IS NULL AND first_due_date IS NOT NULL;
+UPDATE payables SET due_day=EXTRACT(DAY FROM first_due_date),due_month=CASE WHEN frequency='yearly' THEN EXTRACT(MONTH FROM first_due_date)::integer ELSE NULL END WHERE frequency IN ('monthly','yearly') AND due_day IS NULL AND first_due_date IS NOT NULL;
+ALTER TABLE payables ALTER COLUMN first_due_date DROP NOT NULL;
 COMMIT;
