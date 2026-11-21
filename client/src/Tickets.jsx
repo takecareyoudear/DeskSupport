@@ -22,15 +22,21 @@ const selectors = [
   ['project_id','Project','projects'], ['assignee_id','Assignee','users']
 ];
 const dates = [['entered_date','Entered date'],['due_date','Due date'],['reminder_date','Reminder date']];
-const today = () => {
+const dateFromToday = (days = 0) => {
   const now = new Date();
+  now.setDate(now.getDate() + days);
   return [now.getFullYear(), String(now.getMonth()+1).padStart(2,'0'), String(now.getDate()).padStart(2,'0')].join('-');
+};
+const dateShortcuts = {
+  entered_date: [[0,'Today']],
+  due_date: [[7,'In 1 week'],[30,'In 30 days']],
+  reminder_date: [[1,'Tomorrow'],[7,'In 1 week']]
 };
 
 function TicketForm({ticket, onSaved, onCancel}) {
   const [values,setValues] = useState(() => ({
     title:'', description:'', department_id:'', category_id:'', project_id:'', assignee_id:'',
-    priority:'Medium', entered_date:today(), due_date:'', reminder_date:'', ...ticket
+    priority:'Medium', entered_date:dateFromToday(), due_date:'', reminder_date:'', ...ticket
   }));
   const [options,setOptions] = useState(null);
   const [error,setError] = useState('');
@@ -41,7 +47,8 @@ function TicketForm({ticket, onSaved, onCancel}) {
       .then(setOptions).catch(err => { if (err.name !== 'AbortError') setError(err.message); });
     return () => controller.abort();
   }, [ticket?.id]);
-  const bind = key => ({value:values[key], onChange:e => setValues({...values,[key]:e.target.value})});
+  const change = (key,value) => setValues(previous => ({...previous,[key]:value}));
+  const bind = key => ({value:values[key], onChange:e => change(key,e.target.value)});
   async function save(event) {
     event.preventDefault();
     setBusy(true);
@@ -57,18 +64,42 @@ function TicketForm({ticket, onSaved, onCancel}) {
       setBusy(false);
     }
   }
-  const missingMasters = options && selectors.some(([, , list]) => !options[list].length);
+  const missingOptions = options ? selectors.filter(([, , list]) => !options[list].length).map(([,label]) => label.toLowerCase()) : [];
   return <form className="ticket-form" onSubmit={save}>
-    <label>Title<input {...bind('title')} required maxLength={160}/></label>
-    <label>Description<textarea {...bind('description')} maxLength={2000} rows={3}/></label>
-    <div className="ticket-fields">
-      {selectors.map(([key,label,list]) => <label key={key}>{label}<select {...bind(key)} required disabled={!options}><option value="">Choose {label.toLowerCase()}</option>{options?.[list].map(item => <option key={item.id} value={item.id}>{item.name}{item.username ? ` (@${item.username})` : ''}</option>)}</select></label>)}
-      <label>Priority<select {...bind('priority')}>{['High','Medium','Low'].map(priority => <option key={priority}>{priority}</option>)}</select></label>
-      {dates.map(([key,label]) => <label key={key}>{label}<input {...bind(key)} type="date" required min={key === 'entered_date' ? undefined : values.entered_date} max={key === 'reminder_date' ? values.due_date || undefined : undefined}/></label>)}
-    </div>
-    {missingMasters && <p role="status">Add the missing options in System Settings before saving a ticket.</p>}
+    <fieldset className="ticket-form-section">
+      <legend>Ticket details</legend>
+      <label>Title<input {...bind('title')} placeholder="e.g. Reception printer is offline" required maxLength={160}/></label>
+      <label><span>Description <small>Optional</small></span><textarea {...bind('description')} placeholder="Describe what happened and include any details the assignee needs." maxLength={2000} rows={3}/></label>
+    </fieldset>
+    <fieldset className="ticket-form-section">
+      <legend>Assignment</legend>
+      <div className="ticket-assignment-fields">
+        {selectors.map(([key,label,list]) => <label key={key}>{label}<select {...bind(key)} required disabled={!options || !options[list].length}>
+          <option value="">{!options ? 'Loading options…' : options[list].length ? `Select ${label.toLowerCase()}` : 'No options available'}</option>
+          {options?.[list].map(item => <option key={item.id} value={item.id}>{item.name}{item.username ? ` (@${item.username})` : ''}</option>)}
+        </select></label>)}
+      </div>
+      {missingOptions.length > 0 && <p className="ticket-form-note" role="status">Add options in System Settings for {missingOptions.join(', ')} before saving.</p>}
+      <fieldset className="ticket-priority-control">
+        <legend>Priority</legend>
+        <div>{['Low','Medium','High'].map(priority => <label key={priority} data-priority={priority}>
+          <input type="radio" name="priority" value={priority} checked={values.priority === priority} onChange={() => change('priority',priority)}/>{priority}
+        </label>)}</div>
+      </fieldset>
+    </fieldset>
+    <fieldset className="ticket-form-section">
+      <legend>Schedule</legend>
+      <div className="ticket-date-fields">
+        {dates.map(([key,label]) => <div key={key}>
+          <label>{label}<input {...bind(key)} type="date" required/></label>
+          <div className="ticket-date-shortcuts">
+            {dateShortcuts[key].map(([days,caption]) => <button type="button" key={days} aria-label={`${label}: ${caption}`} aria-pressed={values[key] === dateFromToday(days)} onClick={() => change(key,dateFromToday(days))}>{caption}</button>)}
+          </div>
+        </div>)}
+      </div>
+    </fieldset>
     {error && <p className="ticket-error" role="alert">{error}</p>}
-    <div className="ticket-actions"><button type="button" onClick={onCancel} disabled={busy}>Cancel</button><button className="ticket-primary" disabled={busy || !options || missingMasters}>{busy ? 'Saving…' : ticket ? 'Save changes' : 'Create ticket'}</button></div>
+    <div className="ticket-actions"><button type="button" onClick={onCancel} disabled={busy}>Cancel</button><button className="ticket-primary" disabled={busy || !options || missingOptions.length > 0}>{busy ? 'Saving…' : ticket ? 'Save changes' : 'Create ticket'}</button></div>
   </form>;
 }
 

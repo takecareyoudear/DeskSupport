@@ -7,11 +7,45 @@
 .ticket-heading {justify-content: space-between; margin-block: .75rem;}
 .ticket-heading h1,.ticket-heading h2 {margin: 0; overflow-wrap: anywhere;}
 .ticket-panel {background: white; border: 1px solid #dce5f1; border-radius: 1rem; padding: clamp(.8rem,3vw,1.5rem); color: #1d2d48;}
-.ticket-form,.ticket-fields {display: grid; gap: .9rem;}
-.ticket-fields,.ticket-details {grid-template-columns: repeat(auto-fit,minmax(min(100%,11rem),1fr));}
+.ticket-form {display: grid; gap: 1.2rem;}
+.ticket-details {grid-template-columns: repeat(auto-fit,minmax(min(100%,11rem),1fr));}
 .ticket-form label,.ticket-compose label {display: grid; gap: .35rem; font-weight: 600;}
 .ticket-form :is(input,select,textarea),.ticket-compose textarea {width: 100%; box-sizing: border-box; min-width: 0; border: 1px solid #cbd6e5; border-radius: .5rem; padding: .55rem; background: white; color: inherit; font: inherit; font-weight: 400;}
 .ticket-form textarea,.ticket-compose textarea {resize: vertical;}
+.ticket-form-section {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  margin: 0;
+  padding: .85rem clamp(.75rem,2.5vw,1.25rem) 1.2rem;
+  border: 1px solid #d8e3f3;
+  border-radius: .9rem;
+  background: #f6f9ff;
+}
+.ticket-form-section > legend {padding-inline: .5rem; font-size: 1.05rem; font-weight: 700; color: #21477f;}
+.ticket-form label {font-size: .93rem;}
+.ticket-form label small {margin-left: .35rem; color: #536580; font-weight: 400;}
+.ticket-form :is(input,select,textarea) {min-height: 2.85rem; padding: .65rem .75rem; font-size: 1rem;}
+.ticket-form :is(input,select,textarea):focus-visible {outline: 2px solid #215bc4; outline-offset: 2px;}
+.ticket-form :is(input,textarea)::placeholder {color: #576b88;}
+.ticket-assignment-fields,.ticket-date-fields {display: grid; gap: 1rem; grid-template-columns: repeat(2,minmax(0,1fr));}
+.ticket-date-fields {grid-template-columns: repeat(3,minmax(0,1fr));}
+.ticket-date-shortcuts {display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .55rem;}
+.ticket-date-shortcuts button {border-radius: 2rem; padding: .35rem .65rem; font-size: .83rem; color: #21477f;}
+.ticket-date-shortcuts button[aria-pressed=true] {background: #e3eeff; border-color: #83a9e5;}
+.ticket-priority-control {margin: 0; padding: 0; min-width: 0; border: 0;}
+.ticket-priority-control legend {padding: 0; margin-bottom: .35rem; font-size: .93rem; font-weight: 600;}
+.ticket-priority-control > div {display: flex; gap: .5rem; flex-wrap: wrap;}
+.ticket-priority-control label {display: flex; align-items: center; gap: .4rem; min-height: 2.65rem; padding: .45rem .8rem; border: 1px solid #cbd6e5; border-radius: .6rem; background: white; cursor: pointer;}
+.ticket-priority-control input {width: 1rem; min-height: 0; margin: 0; padding: 0; accent-color: #215bc4;}
+.ticket-priority-control label:has(:checked) {background: #e5efff; border-color: #83a9e5;}
+.ticket-priority-control label[data-priority=High]:has(:checked) {background: #fce8ea; border-color: #dd9ba6; color: #962634;}
+.ticket-priority-control label[data-priority=Medium]:has(:checked) {background: #fff2cc; border-color: #dfc37b; color: #785000;}
+.ticket-form-note {margin: 0; font-size: .9rem; color: #614811;}
+.ticket-form .ticket-actions button {min-height: 2.75rem; padding-inline: 1.15rem;}
+@media (max-width: 640px) {
+  .ticket-assignment-fields,.ticket-date-fields {grid-template-columns: 1fr;}
+}
 .ticket-actions {justify-content: flex-end;}
 .ticket-tabs [aria-pressed=true] {background: #e5efff; border-color: #83a9e5;}
 .ticket-list,.ticket-thread {padding: 0; list-style: none; margin: .8rem 0;}

@@ -14,8 +14,8 @@ CREATE TABLE IF NOT EXISTS tickets (
   creator_id uuid NOT NULL,
   priority text NOT NULL CHECK (priority IN ('High', 'Medium', 'Low')),
   entered_date date NOT NULL,
-  due_date date NOT NULL CHECK (due_date >= entered_date),
-  reminder_date date NOT NULL CHECK (reminder_date BETWEEN entered_date AND due_date),
+  due_date date NOT NULL,
+  reminder_date date NOT NULL,
   revision integer NOT NULL DEFAULT 1,
   updated_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   FOREIGN KEY (organization_id, department_id) REFERENCES departments(organization_id, id),
@@ -24,6 +24,10 @@ CREATE TABLE IF NOT EXISTS tickets (
   FOREIGN KEY (organization_id, assignee_id) REFERENCES users(organization_id, id),
   FOREIGN KEY (organization_id, creator_id) REFERENCES users(organization_id, id)
 );
+ALTER TABLE tickets DROP CONSTRAINT IF EXISTS tickets_check;
+ALTER TABLE tickets DROP CONSTRAINT IF EXISTS tickets_check1;
+ALTER TABLE tickets DROP CONSTRAINT IF EXISTS tickets_due_date_check;
+ALTER TABLE tickets DROP CONSTRAINT IF EXISTS tickets_reminder_date_check;
 CREATE INDEX IF NOT EXISTS tickets_assignee_idx ON tickets(organization_id, assignee_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS tickets_creator_idx ON tickets(organization_id, creator_id, updated_at DESC);
 

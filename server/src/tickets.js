@@ -77,10 +77,10 @@ export function registerTickets(app, {pool}) {
       if (!feedback || feedback.length > 2000) return res.status(400).json({error:'Enter feedback of 1–2,000 characters.'});
     } else if (!title || title.length > 160 || description.length > 2000
       || ![input.department_id,input.category_id,input.project_id,input.assignee_id].every(uuid)
-      || !['High','Medium','Low'].includes(input.priority)
-      || ![input.entered_date,input.due_date,input.reminder_date].every(date)
-      || input.reminder_date < input.entered_date || input.reminder_date > input.due_date) {
-      return res.status(400).json({error:'Enter a title, choose the ticket details, and set the reminder between the entered and due dates.'});
+      || !['High','Medium','Low'].includes(input.priority)) {
+      return res.status(400).json({error:'Enter a title and choose the department, category, project, assignee and priority.'});
+    } else if (![input.entered_date,input.due_date,input.reminder_date].every(date)) {
+      return res.status(400).json({error:'Enter valid calendar dates for the entered, due and reminder dates.'});
     }
 
     const client = await pool.connect();
