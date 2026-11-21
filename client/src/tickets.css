@@ -1,0 +1,36 @@
+.tickets-workspace {max-width: 64rem; width: 100%; margin-inline: auto;}
+.tickets-workspace button {border: 1px solid #cbd6e5; border-radius: .55rem; background: white; color: #233657; padding: .55rem .85rem; cursor: pointer; font: inherit;}
+.tickets-workspace button:disabled {opacity: .55; cursor: default;}
+.tickets-workspace button.ticket-primary {background: #215bc4; border-color: #215bc4; color: white;}
+.tickets-workspace button.ticket-back {border: 0; background: transparent; padding-left: 0;}
+.ticket-heading,.ticket-actions,.ticket-tabs {display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;}
+.ticket-heading {justify-content: space-between; margin-block: .75rem;}
+.ticket-heading h1,.ticket-heading h2 {margin: 0; overflow-wrap: anywhere;}
+.ticket-panel {background: white; border: 1px solid #dce5f1; border-radius: 1rem; padding: clamp(.8rem,3vw,1.5rem); color: #1d2d48;}
+.ticket-form,.ticket-fields {display: grid; gap: .9rem;}
+.ticket-fields,.ticket-details {grid-template-columns: repeat(auto-fit,minmax(min(100%,11rem),1fr));}
+.ticket-form label,.ticket-compose label {display: grid; gap: .35rem; font-weight: 600;}
+.ticket-form :is(input,select,textarea),.ticket-compose textarea {width: 100%; box-sizing: border-box; min-width: 0; border: 1px solid #cbd6e5; border-radius: .5rem; padding: .55rem; background: white; color: inherit; font: inherit; font-weight: 400;}
+.ticket-form textarea,.ticket-compose textarea {resize: vertical;}
+.ticket-actions {justify-content: flex-end;}
+.ticket-tabs [aria-pressed=true] {background: #e5efff; border-color: #83a9e5;}
+.ticket-list,.ticket-thread {padding: 0; list-style: none; margin: .8rem 0;}
+.ticket-list li + li {margin-top: .5rem;}
+.ticket-list button {width: 100%; display: grid; grid-template-columns: 1fr auto; gap: .2rem .75rem; text-align: left; overflow-wrap: anywhere;}
+.ticket-list button > span:nth-child(2) {grid-row: 2; font-size: .85rem;}
+.ticket-priority {grid-column: 2; grid-row: 1 / span 2; align-self: center; border-radius: 1rem; padding: .2rem .55rem; background: #e8eff8;}
+.ticket-priority[data-priority=High] {color: #962634; background: #fce8ea;}
+.ticket-priority[data-priority=Medium] {color: #785000; background: #fff2cc;}
+.ticket-details {display: grid; gap: .5rem; padding: .75rem; border-radius: .6rem; background: #f3f7fd; overflow-wrap: anywhere;}
+.ticket-details dt {font-size: .82rem; color: #415675;}
+.ticket-details dd {margin: .15rem 0 0;}
+.ticket-thread {max-height: 26rem; overflow-y: auto; background: #eef3f9; border-radius: .75rem; padding: .75rem; display: flex; flex-direction: column; align-items: flex-start; gap: .6rem;}
+.ticket-thread li {border-radius: .75rem; max-width: 90%; padding: .55rem .75rem; background: white; overflow-wrap: anywhere;}
+.ticket-thread li.ticket-mine {align-self: flex-end; background: #dceaff;}
+.ticket-thread li.ticket-event {align-self: center; background: #e1e8f3; font-size: .86rem;}
+.ticket-thread li > div {display:flex; flex-wrap: wrap; gap: .25rem .75rem; align-items: baseline;}
+.ticket-thread time {font-size: .74rem; color: #435671;}
+.ticket-thread p {white-space: pre-wrap; margin: .3rem 0 0;}
+.ticket-compose {display: flex; gap: .6rem; align-items: flex-end; flex-wrap: wrap;}
+.ticket-compose label {flex: 1 1 14rem;}
+.ticket-error {color: #982335;}

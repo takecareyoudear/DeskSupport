@@ -2,6 +2,7 @@ import {menuAccess,validMenuRole} from './roles.js';
 import {canAccess} from './menu-catalog.js';
 import { randomUUID } from 'node:crypto';
 import { hashPassword, sessionHash } from './security.js';
+import { registerTickets } from './tickets.js';
 
 export const validUsername = value => typeof value === 'string' && /^[a-z0-9][a-z0-9_.]{2,39}$/.test(value);
 export const publicUser = user => ({id:user.id,email:user.email,fullName:user.full_name,username:user.username,organizationId:user.organization_id,role:user.role,menuRoleId:user.menu_role_id||null,menus:user.access_menus||[]});
@@ -15,6 +16,7 @@ export function registerWorkspace(app,{pool,sessionCookie,origin}) {
     const {rows}=await pool.query('SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()',[sessionHash(sessionCookie(req))]);
     if(!rows[0])return res.status(401).json({error:'Please log in.'});
     req.account=await menuAccess(pool,rows[0]);
+    if(req.path.split('/')[1]==='tickets')return next();
     if(req.account.role!=='admin'){
       const path=req.path.split('/').filter(Boolean);
       const menu=path[0]==='masters'?'settings.master':path[0]==='payables'?'payble':path[0]==='assets'?(path.length===1?'assets':path[1]==='categories'?'assets.categories':'assets.register'):null;
@@ -23,6 +25,7 @@ export function registerWorkspace(app,{pool,sessionCookie,origin}) {
     if(req.method!=='GET' && req.account.role!=='admin')return res.status(403).json({error:'Only organization admins can make changes.'});
     next();
   });
+  registerTickets(app,{pool});
   app.get(`${base}/masters`,async(req,res)=>{
     const result={};
     for(const table of tables) result[table]=(await pool.query(`SELECT id,name FROM ${table} WHERE organization_id=$1 ORDER BY lower(name),id`,[req.account.organization_id])).rows;

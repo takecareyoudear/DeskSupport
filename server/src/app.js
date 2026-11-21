@@ -25,6 +25,7 @@ const pool = new pg.Pool({...databaseOptions(), max:3, connectionTimeoutMillis:1
 pool.on('error',()=>console.error('Database connection error'));
 await pool.query(readFileSync(new URL('./schema.sql',import.meta.url),'utf8'));
 await pool.query(readFileSync(new URL('./organizations.sql',import.meta.url),'utf8'));
+await pool.query(readFileSync(new URL('./tickets.sql',import.meta.url),'utf8'));
 await pool.query(readFileSync(new URL('./assets.sql',import.meta.url),'utf8'));
 await pool.query(readFileSync(new URL('./payables.sql',import.meta.url),'utf8'));
 await pool.query(readFileSync(new URL('./roles.sql',import.meta.url),'utf8'));
