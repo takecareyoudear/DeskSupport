@@ -28,6 +28,7 @@ ALTER TABLE tickets DROP CONSTRAINT IF EXISTS tickets_check;
 ALTER TABLE tickets DROP CONSTRAINT IF EXISTS tickets_check1;
 ALTER TABLE tickets DROP CONSTRAINT IF EXISTS tickets_due_date_check;
 ALTER TABLE tickets DROP CONSTRAINT IF EXISTS tickets_reminder_date_check;
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS completed_at timestamptz;
 CREATE INDEX IF NOT EXISTS tickets_assignee_idx ON tickets(organization_id, assignee_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS tickets_creator_idx ON tickets(organization_id, creator_id, updated_at DESC);
 

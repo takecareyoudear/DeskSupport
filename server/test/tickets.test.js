@@ -76,4 +76,20 @@ test('ticket history survives reassignment and stays within the organization', a
   assert.match(events[2].body,/Assignee: first . second/);
   assert.match(events[2].body,/Priority: High . Medium/);
   assert.equal(events[3].body,'I will follow up.');
+
+  assert.equal(ticket.completed_at,null);
+  const statusPath = `${path}/status`;
+  const complete = {completed:true,revision:ticket.revision};
+  assert.equal((await request(first,statusPath,complete)).status,404);
+  assert.equal((await request(outsider,statusPath,complete)).status,404);
+  assert.equal((await request(second,statusPath,{...complete,completed:'true'})).status,400);
+  assert.equal((await request(second,statusPath,complete)).status,200);
+  assert.equal((await request(second,statusPath,complete)).status,409);
+  const completed = (await request(second)).data.tickets[0];
+  assert.ok(Number.isFinite(Date.parse(completed.completed_at)));
+  assert.equal((await request(second,path)).data.events.at(-1).body,'Completed ticket');
+  assert.equal((await request(admin,statusPath,{completed:false,revision:completed.revision})).status,200);
+  const reopened = (await request(second,path)).data;
+  assert.equal(reopened.ticket.completed_at,null);
+  assert.equal(reopened.events.at(-1).body,'Reopened ticket');
 });

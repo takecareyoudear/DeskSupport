@@ -73,7 +73,9 @@ export function registerTickets(app, {pool}) {
     const title = typeof input.title === 'string' ? input.title.trim() : '';
     const description = typeof input.description === 'string' ? input.description.trim() : '';
     const feedback = typeof input.feedback === 'string' ? input.feedback.trim() : '';
-    if (action === 'feedback') {
+    if (action === 'status') {
+      if (typeof input.completed !== 'boolean') return res.status(400).json({error:'Choose whether the ticket is completed.'});
+    } else if (action === 'feedback') {
       if (!feedback || feedback.length > 2000) return res.status(400).json({error:'Enter feedback of 1–2,000 characters.'});
     } else if (!title || title.length > 160 || description.length > 2000
       || ![input.department_id,input.category_id,input.project_id,input.assignee_id].every(uuid)
@@ -94,13 +96,19 @@ export function registerTickets(app, {pool}) {
           await client.query('ROLLBACK');
           return res.status(404).json({error:'Ticket not found.'});
         }
-        if (action === 'update' && input.revision !== before.revision) {
+        if (['update','status'].includes(action) && input.revision !== before.revision) {
           await client.query('ROLLBACK');
           return res.status(409).json({error:'The ticket details changed. Reopen the ticket and try again.'});
         }
       }
 
-      if (action === 'feedback') {
+      if (action === 'status') {
+        if (input.completed !== Boolean(before.completed_at)) {
+          await client.query(`UPDATE tickets SET completed_at=CASE WHEN $2::boolean THEN clock_timestamp() ELSE NULL END,
+            updated_at=clock_timestamp(), revision=revision+1 WHERE id=$1`, [id,input.completed]);
+          await record(client,id,account,'update',input.completed ? 'Completed ticket' : 'Reopened ticket');
+        }
+      } else if (action === 'feedback') {
         await record(client,id,account,'feedback',feedback);
         await client.query('UPDATE tickets SET updated_at=clock_timestamp() WHERE id=$1',[id]);
       } else {
@@ -140,4 +148,5 @@ export function registerTickets(app, {pool}) {
   app.post(base, (req,res) => save(req,res,'create'));
   app.post(`${base}/:id/update`, (req,res) => save(req,res,'update'));
   app.post(`${base}/:id/feedback`, (req,res) => save(req,res,'feedback'));
+  app.post(`${base}/:id/status`, (req,res) => save(req,res,'status'));
 }

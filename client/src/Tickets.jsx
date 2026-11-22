@@ -1,5 +1,6 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
 import {canAccess} from '../../server/src/menu-catalog.js';
+import TicketReport from './TicketReport';
 import './tickets.css';
 
 const API = import.meta.env.DEV ? (import.meta.env.VITE_API_URL || '') : '';
@@ -103,7 +104,7 @@ function TicketForm({ticket, onSaved, onCancel}) {
   </form>;
 }
 
-function TicketThread({id,user,onBack,onChanged}) {
+function TicketThread({id,user,onBack,onChanged,backLabel}) {
   const [data,setData] = useState(null);
   const [editing,setEditing] = useState(false);
   const [feedback,setFeedback] = useState('');
@@ -157,12 +158,31 @@ function TicketThread({id,user,onBack,onChanged}) {
       setBusy(false);
     }
   }
+  async function toggleCompletion() {
+    setBusy(true);
+    setError('');
+    try {
+      await request(`/${id}/status`, {completed:!data.ticket.completed_at, revision:data.ticket.revision});
+      changed();
+    } catch (err) {
+      if (err.status === 409) setRefresh(value => value+1);
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
   return <section className="ticket-panel">
-    <button className="ticket-back" onClick={onBack}>← My tickets</button>
+    <button className="ticket-back" onClick={onBack}>← {backLabel}</button>
     {data && <>
-      <div className="ticket-heading"><h2>{data.ticket.title}</h2>{!editing && <button onClick={() => setEditing(true)}>Edit details</button>}</div>
+      <div className="ticket-heading"><h2>{data.ticket.title}</h2>{!editing && <div className="ticket-actions">
+        <button disabled={busy} onClick={() => setEditing(true)}>Edit details</button>
+        <button className="ticket-primary" disabled={busy} onClick={toggleCompletion}>{data.ticket.completed_at ? 'Reopen ticket' : 'Mark completed'}</button>
+      </div>}</div>
       {editing ? <TicketForm ticket={data.ticket} onCancel={() => setEditing(false)} onSaved={() => {setEditing(false); changed();}}/> : <>
-        <dl className="ticket-details">{[...selectors.map(([key,label]) => [`${key}_label`,label]),['priority','Priority'],...dates].map(([key,label]) => <div key={key}><dt>{label}</dt><dd>{data.ticket[key]}</dd></div>)}</dl>
+        <dl className="ticket-details">
+          <div><dt>Status</dt><dd>{data.ticket.completed_at ? 'Completed' : 'Pending'}</dd></div>
+          {[...selectors.map(([key,label]) => [`${key}_label`,label]),['priority','Priority'],...dates].map(([key,label]) => <div key={key}><dt>{label}</dt><dd>{data.ticket[key]}</dd></div>)}
+        </dl>
         <h3>Conversation</h3>
         <ol className="ticket-thread" ref={thread} aria-label="Ticket conversation">
           {data.events.map(event => <li key={event.id} className={event.kind === 'update' ? 'ticket-event' : event.actor_id === user.id ? 'ticket-mine' : 'ticket-reply'}>
@@ -189,21 +209,29 @@ export default function Tickets({user, mode, onBack, onCreate, onCreated, newTic
   const [refresh,setRefresh] = useState(0);
   const [error,setError] = useState('');
   const admin = user.role === 'admin';
+  const isReport = mode === 'reports';
+  const heading = isReport ? 'Ticket reports' : mode === 'create' ? 'New ticket' : 'My tickets';
   useEffect(() => {
     if (mode === 'create') return;
     const controller = new AbortController();
     const load = () => request('', undefined, controller.signal)
       .then(data => {setTickets(data.tickets); setError('');})
-      .catch(err => { if (err.name !== 'AbortError') setError(err.message); });
+      .catch(err => {
+        if (err.name === 'AbortError') return;
+        if ([401,403].includes(err.status)) setTickets(null);
+        setError(err.message);
+      });
     load();
     const timer = setInterval(load,15000);
     return () => { controller.abort(); clearInterval(timer); };
-  }, [mode,refresh]);
+  }, [mode,refresh,user.id,user.role]);
   const shown = tickets?.filter(ticket => tab === 'assigned' ? ticket.assignee_id === user.id : tab === 'created' ? ticket.creator_id === user.id : admin);
+  const reportTickets = admin ? tickets : tickets?.filter(ticket => ticket.assignee_id === user.id || ticket.creator_id === user.id);
   return <main className="launcher-main tickets-workspace">
     <button className="ticket-back" onClick={onBack}>← Workspace</button>
-    <div className="ticket-heading"><h1>{mode === 'create' ? 'New ticket' : 'My tickets'}</h1>{mode !== 'create' && canAccess(user,'create') && <button className="ticket-primary" onClick={onCreate}>New ticket</button>}</div>
-    {mode === 'create' ? <section className="ticket-panel"><TicketForm onCancel={onBack} onSaved={onCreated}/></section> : selected ? <TicketThread key={selected} id={selected} user={user} onBack={() => setSelected(null)} onChanged={() => setRefresh(value => value+1)}/> :
+    <div className="ticket-heading"><h1>{heading}</h1>{mode === 'tickets' && canAccess(user,'create') && <button className="ticket-primary" onClick={onCreate}>New ticket</button>}</div>
+    {isReport && <TicketReport tickets={reportTickets} error={error} onOpen={setSelected} today={dateFromToday()} nextWeek={dateFromToday(7)} hidden={Boolean(selected)}/>}
+    {mode === 'create' ? <section className="ticket-panel"><TicketForm onCancel={onBack} onSaved={onCreated}/></section> : selected ? <TicketThread key={selected} id={selected} user={user} backLabel={heading} onBack={() => setSelected(null)} onChanged={() => setRefresh(value => value+1)}/> : !isReport &&
       <section className="ticket-panel">
         <div className="ticket-tabs" aria-label="Ticket filters">{[['assigned','Assigned to me'],['created','Created by me'],...(admin ? [['all','All tickets']] : [])].map(([key,label]) => <button key={key} aria-pressed={tab === key} onClick={() => setTab(key)}>{label}</button>)}</div>
         {error && <p className="ticket-error" role="alert">{error}</p>}

@@ -16,7 +16,7 @@ const menus = [
   ['knowledge', 'Knowledge base', 'Find answers and guides', '#a65b08', 'book'],
   ['activity', 'Activity', 'Your latest workspace activity', '#ba3564', 'activity'],
   ['team', 'Team', 'People in your workspace', '#087b90', 'team'],
-  ['reports', 'Reports', 'Support insights and trends', '#4d50bc', 'chart'],
+  ['reports', 'Reports', 'Ticket status and deadlines', '#4d50bc', 'chart'],
   ['assets', 'Assets', 'Assets, subscriptions and insurance', '#087b90', 'assets'],
   ['payble', 'Payble', 'Bills and recurring expenses', '#a65b08', 'payble'],
   ['settings', 'System Settings', 'Make the workspace yours', '#914598', 'settings'],
@@ -68,7 +68,7 @@ export default function Home({ user:initialUser, onLogout }) {
         <label className="launcher-search"><Icon name="search"/><input aria-label="Search apps" placeholder="Find an app…" value={query} onChange={event => setQuery(event.target.value)}/>{query && <button aria-label="Clear search" onClick={() => setQuery('')}>×</button>}</label>
         <div className="launcher-account"><span className="online-status">Workspace online</span><button className="profile-button" title={user.fullName} aria-label={`View profile for ${user.fullName}`} onClick={() => setSelected(['profile', 'Your profile', '', '#087b57', 'team'])}>{initials}</button></div>
       </header>
-      {['tickets','create'].includes(selected?.[0]) && canAccess(user,selected[0]) ? <Tickets
+      {['tickets','create','reports'].includes(selected?.[0]) && canAccess(user,selected[0]) ? <Tickets
         key={selected[0]} user={user} mode={selected[0]} newTicket={newTicket}
         onBack={()=>{setNewTicket(null);setSelected(null);}}
         onCreate={()=>{setNewTicket(null);setSelected(menus[1]);}}
@@ -84,6 +84,6 @@ export default function Home({ user:initialUser, onLogout }) {
       <footer className="launcher-footer"><span>Simple. Connected. Supported.</span><nav className="launcher-dock" aria-label="Workspace shortcuts"><button className="dock-active" aria-label="Home" onClick={() => { setQuery(''); setSelected(null); }}><Icon name="home"/></button>{[menus[0], menus[1], menus[3]].filter(menu=>canAccess(user,menu[0])).map(menu => <button key={menu[0]} aria-label={menu[1]} style={{color:menu[3]}} onClick={() => {setNewTicket(null);setSelected(menu);}}><Icon name={menu[4]}/></button>)}<span className="dock-divider"/><button aria-label="Sign out" title="Sign out" disabled={loggingOut} onClick={logout}><Icon name="exit"/></button></nav><span>SupportDesk · Your space to resolve</span></footer>
     </div>
     {drawerOpen&&<WorkspaceDrawer canCompany={canAccess(user,'company')} organizationId={user.organizationId} onClose={()=>setDrawerOpen(false)} onNavigate={page=>{setSelected(page?['company']:null);setQuery('');setDrawerOpen(false);}}/>}
-    {selected && !['tickets','create','settings','assets','payble','company'].includes(selected[0]) && <div className="app-modal-backdrop" onClick={() => setSelected(null)}><section className="app-modal" role="dialog" aria-modal="true" aria-labelledby="app-modal-title" onClick={event => event.stopPropagation()} onKeyDown={event => {if(event.key === 'Escape') setSelected(null);}}><span className="modal-icon" style={{color:selected[3]}}><Icon name={selected[4]}/></span><h2 id="app-modal-title">{selected[1]}</h2>{selected[0] === 'profile' ? <><p>{user.fullName}</p><p>{user.email}</p><p>Username: {user.username}</p><p>Organization ID: {user.organizationId}</p></> : <p>This app is coming soon. Your workspace is ready; {selected[1].toLowerCase()} will be available when this module is connected.</p>}<button autoFocus onClick={() => setSelected(null)}>Back to workspace</button></section></div>}
+    {selected && !['tickets','create','reports','settings','assets','payble','company'].includes(selected[0]) && <div className="app-modal-backdrop" onClick={() => setSelected(null)}><section className="app-modal" role="dialog" aria-modal="true" aria-labelledby="app-modal-title" onClick={event => event.stopPropagation()} onKeyDown={event => {if(event.key === 'Escape') setSelected(null);}}><span className="modal-icon" style={{color:selected[3]}}><Icon name={selected[4]}/></span><h2 id="app-modal-title">{selected[1]}</h2>{selected[0] === 'profile' ? <><p>{user.fullName}</p><p>{user.email}</p><p>Username: {user.username}</p><p>Organization ID: {user.organizationId}</p></> : <p>This app is coming soon. Your workspace is ready; {selected[1].toLowerCase()} will be available when this module is connected.</p>}<button autoFocus onClick={() => setSelected(null)}>Back to workspace</button></section></div>}
   </div>;
 }
